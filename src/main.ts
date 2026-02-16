@@ -60,8 +60,8 @@ let audioEnabled = false
 let photoModeActive = false
 let photoModeCamera: UniversalCamera | null = null
 
-type GameState = 'hub' | 'africa' | 'nigeria' | 'lga-select' | 'village' | 'festival'
-type Tribe = 'Igbo' | 'Yoruba' | 'Hausa'
+type GameState = 'hub' | 'africa' | 'nigeria' | 'kenya' | 'lga-select' | 'village' | 'festival'
+type Tribe = 'Igbo' | 'Yoruba' | 'Hausa' | 'Maasai'
 type IgboLGA = 'Owerri' | 'Arochukwu' | 'Onitsha'
 
 let state: GameState = 'hub'
@@ -110,6 +110,16 @@ const hausaMission = {
   flagsCollected: 0,
   flagsNeeded: 3,
   arranged: false,
+}
+
+const maasaiMission = {
+  beadsRed: 0,
+  beadsGreen: 0,
+  beadsBlue: 0,
+  beadsNeeded: 3,
+  ceremonyDone: false,
+  danceSteps: 0,
+  danceNeeded: 4,
 }
 
 function setAction(label: string | null, handler: (() => void) | null) {
@@ -342,6 +352,7 @@ const sharedRoot = new TransformNode('sharedRoot', scene)
 const hubMarkersRoot = new TransformNode('hubMarkersRoot', scene)
 const africaMarkersRoot = new TransformNode('africaMarkersRoot', scene)
 const nigeriaRoot = new TransformNode('nigeriaRoot', scene)
+const kenyaRoot = new TransformNode('kenyaRoot', scene)
 const villageRoot = new TransformNode('villageRoot', scene)
 const igboRoot = new TransformNode('igboRoot', scene)
 const owrerriZone = new TransformNode('owrerriZone', scene)
@@ -349,6 +360,7 @@ const arochukwuZone = new TransformNode('arochukwuZone', scene)
 const onitshZone = new TransformNode('onitshZone', scene)
 const yorubaRoot = new TransformNode('yorubaRoot', scene)
 const hausaRoot = new TransformNode('hausaRoot', scene)
+const maasaiRoot = new TransformNode('maasaiRoot', scene)
 const festivalRoot = new TransformNode('festivalRoot', scene)
 
 igboRoot.parent = villageRoot
@@ -357,6 +369,7 @@ arochukwuZone.parent = igboRoot
 onitshZone.parent = igboRoot
 yorubaRoot.parent = villageRoot
 hausaRoot.parent = villageRoot
+maasaiRoot.parent = villageRoot
 
 function createSkyDome() {
   const texture = new DynamicTexture('skyTexture', { width: 512, height: 512 }, scene, false)
@@ -519,6 +532,16 @@ const nigeriaMarker = createMarker(
 nigeriaMarker.isPickable = true
 createLabel('Nigeria', nigeriaMarker.position.add(new Vector3(0, 0.9, 0)), africaMarkersRoot, '#e9f7e0')
 
+const kenyaMarker = createMarker(
+  'kenya',
+  new Color3(0.25, 0.55, 0.3),
+  sphericalPosition(5.35, 0, 37),
+  africaMarkersRoot,
+  () => setState('kenya')
+)
+kenyaMarker.isPickable = true
+createLabel('Kenya', kenyaMarker.position.add(new Vector3(0, 0.9, 0)), africaMarkersRoot, '#d4f1d4')
+
 const nigeriaBase = MeshBuilder.CreateBox('nigeriaBase', { width: 12, height: 0.5, depth: 8 }, scene)
 nigeriaBase.position = new Vector3(0, -0.3, 0)
 const nigeriaBaseMat = new StandardMaterial('nigeriaBaseMat', scene)
@@ -630,6 +653,66 @@ createLGAMarker('Onitsha', new Color3(0.45, 0.6, 0.5), new Vector3(3, 0.5, 2), (
   resetTribeMission('Igbo')
   setState('village')
   walkCamera.position = new Vector3(-8, 2, -20)
+})
+
+// Kenya setup
+const kenyaBase = MeshBuilder.CreateBox('kenyaBase', { width: 12, height: 0.5, depth: 8 }, scene)
+kenyaBase.position = new Vector3(0, -0.3, 0)
+const kenyaBaseMat = new StandardMaterial('kenyaBaseMat', scene)
+kenyaBaseMat.diffuseColor = new Color3(0.15, 0.2, 0.12)
+kenyaBaseMat.specularColor = new Color3(0.1, 0.1, 0.1)
+kenyaBase.material = kenyaBaseMat
+kenyaBase.parent = kenyaRoot
+
+const kenyaMapTexture = new DynamicTexture('kenyaMapTexture', { width: 512, height: 512 }, scene, false)
+const kenyaMapCtx = kenyaMapTexture.getContext() as CanvasRenderingContext2D
+kenyaMapCtx.fillStyle = '#1a3a2a'
+kenyaMapCtx.fillRect(0, 0, 512, 512)
+kenyaMapCtx.strokeStyle = '#d4c5a4'
+kenyaMapCtx.lineWidth = 6
+kenyaMapCtx.strokeRect(20, 20, 472, 472)
+kenyaMapCtx.fillStyle = '#8b6f47'
+kenyaMapCtx.fillRect(80, 100, 140, 160)
+kenyaMapCtx.fillStyle = '#d4a574'
+kenyaMapCtx.fillRect(240, 80, 180, 200)
+kenyaMapCtx.fillStyle = '#f8e8c8'
+kenyaMapCtx.font = 'bold 42px Palatino'
+kenyaMapCtx.textAlign = 'center'
+kenyaMapCtx.fillText('KENYA', 256, 50)
+kenyaMapCtx.font = 'bold 28px Palatino'
+kenyaMapCtx.fillText('Maasai', 150, 180)
+kenyaMapCtx.fillText('Samburu', 330, 180)
+kenyaMapTexture.update()
+
+const kenyaMap = MeshBuilder.CreateGround('kenyaMap', { width: 11, height: 7 }, scene)
+kenyaMap.position = new Vector3(0, 0.01, 0)
+const kenyaMapMat = new StandardMaterial('kenyaMapMat', scene)
+kenyaMapMat.diffuseTexture = kenyaMapTexture
+kenyaMapMat.emissiveTexture = kenyaMapTexture
+kenyaMap.material = kenyaMapMat
+kenyaMap.parent = kenyaRoot
+
+const kenyaTribeMarkersRoot = new TransformNode('kenyaTribeMarkersRoot', scene)
+kenyaTribeMarkersRoot.parent = kenyaRoot
+
+function createKenyaTribeMarker(name: Tribe, color: Color3, position: Vector3, onPick: () => void) {
+  const marker = MeshBuilder.CreateSphere(`${name}-kenya-tribe`, { diameter: 0.6 }, scene)
+  marker.position = position
+  const mat = new StandardMaterial(`${name}-kenya-tribe-mat`, scene)
+  mat.diffuseColor = color
+  mat.emissiveColor = color.scale(0.3)
+  marker.material = mat
+  marker.metadata = { onPick }
+  marker.parent = kenyaTribeMarkersRoot
+  createLabel(name, position.add(new Vector3(0, 0.7, 0)), kenyaTribeMarkersRoot, '#f9e6be')
+  return marker
+}
+
+createKenyaTribeMarker('Maasai', new Color3(0.8, 0.2, 0.2), new Vector3(-1.5, 0.6, 1), () => {
+  selectedTribe = 'Maasai'
+  resetTribeMission('Maasai')
+  setState('village')
+  walkCamera.position = new Vector3(0, 2, -18)
 })
 
 const ground = MeshBuilder.CreateGround('villageGround', { width: 80, height: 80 }, scene)
@@ -913,6 +996,9 @@ const kolaMeshes: Mesh[] = []
 const stickMeshes: Mesh[] = []
 const fabricMeshes: Mesh[] = []
 const flagMeshes: Mesh[] = []
+const beadRedMeshes: Mesh[] = []
+const beadGreenMeshes: Mesh[] = []
+const beadBlueMeshes: Mesh[] = []
 
 function createCollectible(name: string, color: Color3, position: Vector3, targetArray: Mesh[]) {
   const item = MeshBuilder.CreateSphere(name, { diameter: 0.8 }, scene)
@@ -962,6 +1048,90 @@ function createFlagBundle(position: Vector3) {
   flagMeshes.push(flag)
   return flag
 }
+
+function createBead(position: Vector3, color: Color3, targetArray: Mesh[]) {
+  const bead = MeshBuilder.CreateSphere('bead', { diameter: 0.6 }, scene)
+  bead.position = position
+  const mat = new StandardMaterial('bead-mat', scene)
+  mat.diffuseColor = color
+  mat.emissiveColor = color.scale(0.4)
+  bead.material = mat
+  bead.parent = maasaiRoot
+  targetArray.push(bead)
+  return bead
+}
+
+// Maasai village: Ceremonial dance circle and bead trading area
+const manyattaCircle = MeshBuilder.CreateCylinder('manyattaCircle', { diameter: 12, height: 0.1 }, scene)
+manyattaCircle.position = new Vector3(0, 0.05, 0)
+const manyattaCircleMat = new StandardMaterial('manyattaCircleMat', scene)
+manyattaCircleMat.diffuseColor = new Color3(0.5, 0.38, 0.28)
+manyattaCircle.material = manyattaCircleMat
+manyattaCircle.parent = maasaiRoot
+
+// Fire circle (dance interaction zone)
+const fireCircle = MeshBuilder.CreateCylinder('fireCircle', { diameter: 3, height: 0.15 }, scene)
+fireCircle.position = new Vector3(0, 0.08, 0)
+const fireCircleMat = new StandardMaterial('fireCircleMat', scene)
+fireCircleMat.diffuseColor = new Color3(1, 0.5, 0.2)
+fireCircleMat.emissiveColor = new Color3(0.4, 0.15, 0.05)
+fireCircle.material = fireCircleMat
+fireCircle.parent = maasaiRoot
+fireCircle.metadata = { isFireCircle: true }
+
+// Manyatta huts (warrior dwellings) arranged in semicircle
+const hutPositions = [
+  new Vector3(-5, 1.5, -6),
+  new Vector3(0, 1.5, -8),
+  new Vector3(5, 1.5, -6),
+  new Vector3(-6, 1.5, 2),
+  new Vector3(6, 1.5, 2),
+]
+
+hutPositions.forEach((pos, idx) => {
+  const hutWall = MeshBuilder.CreateCylinder(`hutWall-${idx}`, { diameter: 3, height: 2.2 }, scene)
+  hutWall.position = pos
+  const hutMat = new StandardMaterial(`hutMat-${idx}`, scene)
+  hutMat.diffuseColor = new Color3(0.6, 0.45, 0.3)
+  hutWall.material = hutMat
+  hutWall.parent = maasaiRoot
+
+  const hutRoof = MeshBuilder.CreateSphere(`hutRoof-${idx}`, { diameter: 3.2 }, scene)
+  hutRoof.position = new Vector3(pos.x, pos.y + 1.8, pos.z)
+  hutRoof.scaling = new Vector3(1, 0.6, 1)
+  const roofMat = new StandardMaterial(`roofMat-${idx}`, scene)
+  roofMat.diffuseColor = new Color3(0.45, 0.35, 0.2)
+  hutRoof.material = roofMat
+  hutRoof.parent = maasaiRoot
+})
+
+// Maasai warriors
+createNpc('maasaiLeader', new Vector3(-3, 1.1, 3), new Color3(0.8, 0.3, 0.2), maasaiRoot)
+createNpc('warrior1', new Vector3(2, 1.1, 4), new Color3(0.75, 0.28, 0.18), maasaiRoot)
+createNpc('warrior2', new Vector3(-5, 1.1, -3), new Color3(0.7, 0.25, 0.15), maasaiRoot)
+
+// Bead trading positions with colored beads
+const redBeadPos = [
+  new Vector3(-2, 0.5, 4),
+  new Vector3(2, 0.5, 5),
+  new Vector3(-4, 0.5, 2),
+]
+
+const greenBeadPos = [
+  new Vector3(3, 0.5, 3),
+  new Vector3(1, 0.5, 6),
+  new Vector3(-6, 0.5, 4),
+]
+
+const blueBeadPos = [
+  new Vector3(-1, 0.5, 2),
+  new Vector3(4, 0.5, 2),
+  new Vector3(0, 0.5, 5),
+]
+
+redBeadPos.forEach(pos => createBead(pos, new Color3(0.8, 0.2, 0.2), beadRedMeshes))
+greenBeadPos.forEach(pos => createBead(pos, new Color3(0.2, 0.7, 0.2), beadGreenMeshes))
+blueBeadPos.forEach(pos => createBead(pos, new Color3(0.2, 0.4, 0.8), beadBlueMeshes))
 
 const yamPositions = [
   new Vector3(6, 0.6, 14),
@@ -1013,6 +1183,15 @@ function resetHausaCollectibles() {
   flagPositions.forEach((pos) => createFlagBundle(pos))
 }
 
+function resetMaasaiCollectibles() {
+  beadRedMeshes.splice(0).forEach((mesh) => mesh.dispose())
+  beadGreenMeshes.splice(0).forEach((mesh) => mesh.dispose())
+  beadBlueMeshes.splice(0).forEach((mesh) => mesh.dispose())
+  redBeadPos.forEach(pos => createBead(pos, new Color3(0.8, 0.2, 0.2), beadRedMeshes))
+  greenBeadPos.forEach(pos => createBead(pos, new Color3(0.2, 0.7, 0.2), beadGreenMeshes))
+  blueBeadPos.forEach(pos => createBead(pos, new Color3(0.2, 0.4, 0.8), beadBlueMeshes))
+}
+
 function resetTribeMission(tribe: Tribe) {
   if (tribe === 'Igbo') {
     igboMission.yamsCollected = 0
@@ -1039,11 +1218,21 @@ function resetTribeMission(tribe: Tribe) {
     hausaMission.arranged = false
     resetHausaCollectibles()
   }
+
+  if (tribe === 'Maasai') {
+    maasaiMission.beadsRed = 0
+    maasaiMission.beadsGreen = 0
+    maasaiMission.beadsBlue = 0
+    maasaiMission.danceSteps = 0
+    maasaiMission.ceremonyDone = false
+    resetMaasaiCollectibles()
+  }
 }
 
 resetIgboCollectibles()
 resetYorubaCollectibles()
 resetHausaCollectibles()
+resetMaasaiCollectibles()
 
 const festivalStage = MeshBuilder.CreateCylinder('festivalStage', { diameter: 10, height: 0.4 }, scene)
 festivalStage.position = new Vector3(2, 0.2, 6)
@@ -1074,6 +1263,7 @@ function setState(next: GameState) {
   africaMarkersRoot.setEnabled(state === 'africa')
   sharedRoot.setEnabled(state === 'hub' || state === 'africa')
   nigeriaRoot.setEnabled(state === 'nigeria' || state === 'lga-select')
+  kenyaRoot.setEnabled(state === 'kenya')
   lgaMarkersRoot.setEnabled(state === 'lga-select')
   villageRoot.setEnabled(state === 'village' || state === 'festival')
   festivalRoot.setEnabled(state === 'festival')
@@ -1083,6 +1273,7 @@ function setState(next: GameState) {
   onitshZone.setEnabled(activeTribe === 'Igbo' && activeLGA === 'Onitsha' && (state === 'village' || state === 'festival'))
   yorubaRoot.setEnabled(state === 'village' || state === 'festival' ? activeTribe === 'Yoruba' : false)
   hausaRoot.setEnabled(state === 'village' || state === 'festival' ? activeTribe === 'Hausa' : false)
+  maasaiRoot.setEnabled(state === 'village' || state === 'festival' ? activeTribe === 'Maasai' : false)
 
   if (state === 'hub') {
     scene.activeCamera = arcCamera
@@ -1132,6 +1323,23 @@ function setState(next: GameState) {
     setHint('Igbo, Yoruba, and Hausa paths are available in this demo.')
     setAction('Back to Africa', () => setState('africa'))
     setTutorial('Choose a tribe marker to enter its mission.')
+    setRecapVisible(false)
+  }
+
+  if (state === 'kenya') {
+    scene.activeCamera = arcCamera
+    arcCamera.attachControl(canvas, true)
+    walkCamera.detachControl()
+    uiCrosshair.classList.add('hidden')
+    uiChoices.classList.add('hidden')
+    arcCamera.beta = Math.PI / 3.2
+    desiredTarget = new Vector3(0, 0, 0)
+    desiredRadius = 12
+    setTitle('Kenya', 'Meet the Maasai people.')
+    setObjective('Click the Maasai warrior marker to begin bead trading and warrior dance training.')
+    setHint('The Maasai are renowned warriors and pastoralists of East Africa.')
+    setAction('Back to Africa', () => setState('africa'))
+    setTutorial('Click the Maasai marker to enter their ceremonial village.')
     setRecapVisible(false)
   }
 
@@ -1254,18 +1462,36 @@ function updateMissionUI() {
     return
   }
 
-  if (!hausaMission.arranged) {
-    const progress = `Fabric ${hausaMission.fabricCollected}/${hausaMission.fabricNeeded} · Flags ${hausaMission.flagsCollected}/${hausaMission.flagsNeeded}`
-    if (hausaMission.fabricCollected < hausaMission.fabricNeeded || hausaMission.flagsCollected < hausaMission.flagsNeeded) {
-      setObjective('Collect fabric and flags for the Durbar parade.', progress)
+  if (activeTribe === 'Hausa') {
+    if (!hausaMission.arranged) {
+      const progress = `Fabric ${hausaMission.fabricCollected}/${hausaMission.fabricNeeded} · Flags ${hausaMission.flagsCollected}/${hausaMission.flagsNeeded}`
+      if (hausaMission.fabricCollected < hausaMission.fabricNeeded || hausaMission.flagsCollected < hausaMission.flagsNeeded) {
+        setObjective('Collect fabric and flags for the Durbar parade.', progress)
+        return
+      }
+
+      setObjective('Arrange the parade flags.', 'Visit the parade marker to finalize the setup.')
       return
     }
 
-    setObjective('Arrange the parade flags.', 'Visit the parade marker to finalize the setup.')
-    return
+    setObjective('The Durbar parade is ready!', 'Celebrate and explore the village.')
   }
 
-  setObjective('The Durbar parade is ready!', 'Celebrate and explore the village.')
+  if (activeTribe === 'Maasai') {
+    const beadProgress = `Red ${maasaiMission.beadsRed}/3 · Green ${maasaiMission.beadsGreen}/3 · Blue ${maasaiMission.beadsBlue}/3`
+    
+    if (maasaiMission.beadsRed < 3 || maasaiMission.beadsGreen < 3 || maasaiMission.beadsBlue < 3) {
+      setObjective('Collect red, green, and blue beads for the warrior ceremony.', beadProgress)
+      return
+    }
+
+    if (!maasaiMission.ceremonyDone) {
+      setObjective('The beads are gathered!', 'Visit the fire circle to perform the warrior dance.')
+      return
+    }
+
+    setObjective('The ceremony is complete!', 'The warrior initiation has been honored.')
+  }
 }
 
 uiChoices.querySelectorAll<HTMLButtonElement>('.choice').forEach((button) => {
@@ -1444,6 +1670,40 @@ scene.onPointerObservable.add((pointerInfo) => {
         playTone(500, 0.12, 'triangle', 0.05)
       }
     }
+
+    if (activeTribe === 'Maasai') {
+      if (beadRedMeshes.includes(pickedMesh)) {
+        pickedMesh.dispose()
+        maasaiMission.beadsRed += 1
+        updateMissionUI()
+        showToast('Red bead collected')
+        playTone(520, 0.12, 'triangle', 0.05)
+        
+        if (maasaiMission.beadsRed === 1) {
+          showCulturalPopup(
+            'Maasai Beadwork',
+            'Maasai Tradition',
+            'Beadwork is integral to Maasai identity and storytelling. Each bead color carries deep meaning: red represents bravery and strength, green symbolizes land and growth, and blue represents energy and sky. Warriors wear beaded ornaments to display their status, achievements, and cultural heritage.'
+          )
+        }
+      }
+
+      if (beadGreenMeshes.includes(pickedMesh)) {
+        pickedMesh.dispose()
+        maasaiMission.beadsGreen += 1
+        updateMissionUI()
+        showToast('Green bead collected')
+        playTone(540, 0.12, 'triangle', 0.05)
+      }
+
+      if (beadBlueMeshes.includes(pickedMesh)) {
+        pickedMesh.dispose()
+        maasaiMission.beadsBlue += 1
+        updateMissionUI()
+        showToast('Blue bead collected')
+        playTone(560, 0.12, 'triangle', 0.05)
+      }
+    }
   }
 })
 
@@ -1584,6 +1844,19 @@ function updateInteractions() {
     }
   }
 
+  if (activeTribe === 'Maasai') {
+    const distanceToFire = Vector3.Distance(playerPos, fireCircle.position)
+    if (maasaiMission.beadsRed >= 3 && maasaiMission.beadsGreen >= 3 && maasaiMission.beadsBlue >= 3 && !maasaiMission.ceremonyDone) {
+      if (distanceToFire < 5) {
+        setAction('Perform warrior dance', () => {
+          maasaiMission.danceSteps = 0
+          updateMaasaiDance()
+        })
+        return
+      }
+    }
+  }
+
   setAction(null, null)
 }
 
@@ -1623,6 +1896,33 @@ function updateCookingStep() {
       setHint('Carry the dishes to the elders.')
       setAction(null, null)
       updateMissionUI()
+    })
+  }
+}
+
+function updateMaasaiDance() {
+  const danceSteps = ['Lift', 'Jump', 'Turn', 'Leap']
+  const currentStep = maasaiMission.danceSteps
+  
+  if (currentStep < 4) {
+    setObjective(`Warrior Dance: Step ${currentStep + 1}`, `Press the action button to ${danceSteps[currentStep]}.`)
+    let performedStep = false
+    setAction(danceSteps[currentStep], () => {
+      if (!performedStep) {
+        performedStep = true
+        maasaiMission.danceSteps += 1
+        showToast(`${danceSteps[currentStep]} complete!`)
+        playTone(300 + currentStep * 80, 0.1, 'sine', 0.05)
+        
+        if (maasaiMission.danceSteps < 4) {
+          setTimeout(() => updateMaasaiDance(), 400)
+        } else {
+          maasaiMission.ceremonyDone = true
+          showToast('Warrior ceremony complete!')
+          playTone(880, 0.25, 'sine', 0.08)
+          setState('festival')
+        }
+      }
     })
   }
 }
