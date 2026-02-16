@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>theworld-hub</title>
+  </head>
+  <body>
+    <canvas id="renderCanvas"></canvas>
+    <div id="app" aria-live="polite">
+      <div class="panel top">
+        <div id="uiTitle" class="title">The World Museum</div>
+        <div id="uiSubtitle" class="subtitle">Choose a continent to begin.</div>
+      </div>
+      <div class="panel side">
+        <div class="section-title">Objective</div>
+        <div id="uiObjective" class="objective">Explore the hub world.</div>
+        <div id="uiProgress" class="progress"></div>
+        <div id="uiChoices" class="choices hidden">
+          <button class="choice" data-tribe="Igbo">Igbo</button>
+          <button class="choice" data-tribe="Yoruba">Yoruba</button>
+          <button class="choice" data-tribe="Hausa">Hausa</button>
+        </div>
+        <button id="uiAction" class="primary hidden" type="button">Action</button>
+      </div>
+      <div id="uiHint" class="panel bottom">Tip: Drag to rotate the globe, then click Africa.</div>
+      <div id="uiToast" class="toast hidden"></div>
+      <div class="legend" id="uiLegend">
+        <div class="legend-title">World Museum</div>
+        <div class="legend-item"><span class="dot africa"></span>Africa (Demo)</div>
+        <div class="legend-item"><span class="dot locked"></span>Europe</div>
+        <div class="legend-item"><span class="dot locked"></span>Asia</div>
+        <div class="legend-item"><span class="dot locked"></span>Americas</div>
+        <div class="legend-item"><span class="dot locked"></span>Oceania</div>
+      </div>
+      <div id="uiTutorial" class="tutorial">
+        <div class="tutorial-title">Quick Guide</div>
+        <div id="uiTutorialBody" class="tutorial-body"></div>
+        <button id="uiTutorialClose" class="tutorial-close" type="button">Got it</button>
+      </div>
+      <div id="uiRecap" class="recap hidden" aria-live="polite">
+        <div id="uiRecapTitle" class="recap-title">Festival Recap</div>
+        <div id="uiRecapBody" class="recap-body"></div>
+        <button id="uiRecapClose" class="recap-close" type="button">Continue</button>
+      </div>
+      <div id="uiCrosshair" class="crosshair hidden"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
