@@ -280,6 +280,76 @@ body {
   cursor: pointer;
 }
 
+.cultural-popup {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(135deg, rgba(250, 238, 214, 0.95), rgba(245, 221, 179, 0.9));
+  border: 2px solid rgba(196, 95, 47, 0.3);
+  border-radius: 20px;
+  padding: 32px 40px;
+  max-width: 600px;
+  width: min(90vw, 600px);
+  box-shadow: 0 30px 80px rgba(12, 18, 24, 0.4);
+  z-index: 1000;
+  pointer-events: auto;
+  animation: popupIn 0.4s ease-out;
+}
+
+.cultural-popup.hidden {
+  display: none;
+}
+
+.cultural-popup-title {
+  font-size: 1.6rem;
+  color: #2a2214;
+  margin-bottom: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.cultural-popup-subtitle {
+  font-size: 0.9rem;
+  color: rgba(42, 34, 20, 0.7);
+  margin-bottom: 16px;
+}
+
+.cultural-popup-body {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #2a2214;
+  margin-bottom: 20px;
+}
+
+.cultural-popup-close {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  background: linear-gradient(120deg, #c45f2f, #e2a251);
+  color: #fff8ed;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.cultural-popup-close:hover {
+  transform: scale(1.02);
+}
+
+@keyframes popupIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

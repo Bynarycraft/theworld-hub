@@ -47,22 +47,32 @@ const uiRecap = requireElement<HTMLDivElement>('#uiRecap')
 const uiRecapTitle = requireElement<HTMLDivElement>('#uiRecapTitle')
 const uiRecapBody = requireElement<HTMLDivElement>('#uiRecapBody')
 const uiRecapClose = requireElement<HTMLButtonElement>('#uiRecapClose')
+const uiCulturalPopup = requireElement<HTMLDivElement>('#uiCulturalPopup')
+const uiCulturalTitle = requireElement<HTMLDivElement>('#uiCulturalTitle')
+const uiCulturalSubtitle = requireElement<HTMLDivElement>('#uiCulturalSubtitle')
+const uiCulturalBody = requireElement<HTMLDivElement>('#uiCulturalBody')
+const uiCulturalClose = requireElement<HTMLButtonElement>('#uiCulturalClose')
 
 let audioContext: AudioContext | null = null
 let ambientOscillator: OscillatorNode | null = null
 let ambientGain: GainNode | null = null
 let audioEnabled = false
+let photoModeActive = false
+let photoModeCamera: UniversalCamera | null = null
 
-type GameState = 'hub' | 'africa' | 'nigeria' | 'village' | 'festival'
+type GameState = 'hub' | 'africa' | 'nigeria' | 'lga-select' | 'village' | 'festival'
 type Tribe = 'Igbo' | 'Yoruba' | 'Hausa'
+type IgboLGA = 'Owerri' | 'Arochukwu' | 'Onitsha'
 
 let state: GameState = 'hub'
 let selectedTribe: Tribe | null = null
+let selectedLGA: IgboLGA | null = null
 let currentAction: (() => void) | null = null
 let desiredTarget = new Vector3(0, 0, 0)
 let desiredRadius = 16
 
 const igboMission = {
+  // Owerri: New Yam Festival
   yamsCollected: 0,
   kolaCollected: 0,
   yamsNeeded: 5,
@@ -70,8 +80,19 @@ const igboMission = {
   cookingStage: 0,
   cookingDone: false,
   delivered: false,
+  // Arochukwu: Story Stones
   storyStage: 0,
   storyDone: false,
+  // Onitsha: River Trade
+  fabricWoven: 0,
+  fabricNeeded: 2,
+}
+
+const arochukwuMission = {
+  stonesFound: 0,
+  stonesNeeded: 3,
+  stonePuzzleDone: false,
+  storyUnlocked: false,
 }
 
 const yorubaMission = {
@@ -214,12 +235,66 @@ function showRecap(tribe: Tribe) {
   setRecapVisible(true)
 }
 
+function showCulturalPopup(title: string, subtitle: string, body: string) {
+  uiCulturalTitle.textContent = title
+  uiCulturalSubtitle.textContent = subtitle
+  uiCulturalBody.textContent = body
+  uiCulturalPopup.classList.remove('hidden')
+}
+
+function hideCulturalPopup() {
+  uiCulturalPopup.classList.add('hidden')
+}
+
+function togglePhotoMode() {
+  photoModeActive = !photoModeActive
+
+  if (photoModeActive) {
+    // Enter photo mode: create a free-floating camera
+    if (!photoModeCamera) {
+      photoModeCamera = new UniversalCamera('photoModeCamera', walkCamera.position.clone(), scene)
+      photoModeCamera.speed = 0.5
+      photoModeCamera.angularSensibility = 3000
+      photoModeCamera.minZ = 0.1
+    }
+    photoModeCamera.position = walkCamera.position.clone()
+    photoModeCamera.rotation = walkCamera.rotation.clone()
+    scene.activeCamera = photoModeCamera
+    photoModeCamera.attachControl(canvas, true)
+    walkCamera.detachControl()
+    uiAction.classList.add('hidden')
+    uiObjective.classList.add('hidden')
+    uiHint.classList.add('hidden')
+    setTitle('Photo Mode', 'Press P again to exit. WASD to move freely.')
+    showToast('📸 Photo Mode Active - WASD to fly around, click to look. Press P to exit.')
+    playTone(880, 0.2, 'sine', 0.06)
+  } else {
+    // Exit photo mode: return to walk camera
+    walkCamera.position = photoModeCamera!.position.clone()
+    walkCamera.rotation = photoModeCamera!.rotation.clone()
+    scene.activeCamera = walkCamera
+    walkCamera.attachControl(canvas, true)
+    photoModeCamera!.detachControl()
+    uiAction.classList.remove('hidden')
+    uiObjective.classList.remove('hidden')
+    uiHint.classList.remove('hidden')
+    updateMissionUI()
+    updateInteractions()
+    playTone(440, 0.2, 'sine', 0.06)
+    showToast('✓ Photo Mode Exited')
+  }
+}
+
 uiTutorialClose.addEventListener('click', () => {
   uiTutorial.style.display = 'none'
 })
 
 uiRecapClose.addEventListener('click', () => {
   setRecapVisible(false)
+})
+
+uiCulturalClose.addEventListener('click', () => {
+  hideCulturalPopup()
 })
 
 window.addEventListener('pointerdown', () => enableAudio(), { once: true })
@@ -232,6 +307,12 @@ uiAction.addEventListener('click', () => {
 window.addEventListener('keydown', (event) => {
   if (event.key.toLowerCase() === 'e') {
     currentAction?.()
+  }
+  
+  if (event.key.toLowerCase() === 'p') {
+    if (state === 'village' || state === 'festival') {
+      togglePhotoMode()
+    }
   }
 })
 
@@ -263,11 +344,17 @@ const africaMarkersRoot = new TransformNode('africaMarkersRoot', scene)
 const nigeriaRoot = new TransformNode('nigeriaRoot', scene)
 const villageRoot = new TransformNode('villageRoot', scene)
 const igboRoot = new TransformNode('igboRoot', scene)
+const owrerriZone = new TransformNode('owrerriZone', scene)
+const arochukwuZone = new TransformNode('arochukwuZone', scene)
+const onitshZone = new TransformNode('onitshZone', scene)
 const yorubaRoot = new TransformNode('yorubaRoot', scene)
 const hausaRoot = new TransformNode('hausaRoot', scene)
 const festivalRoot = new TransformNode('festivalRoot', scene)
 
 igboRoot.parent = villageRoot
+owrerriZone.parent = igboRoot
+arochukwuZone.parent = igboRoot
+onitshZone.parent = igboRoot
 yorubaRoot.parent = villageRoot
 hausaRoot.parent = villageRoot
 
@@ -503,9 +590,46 @@ createTribeMarker('Yoruba', new Color3(0.3, 0.6, 0.78), new Vector3(2.2, 0.6, -0
 
 createTribeMarker('Igbo', new Color3(0.36, 0.72, 0.36), new Vector3(0.6, 0.6, 2), () => {
   selectedTribe = 'Igbo'
+  setState('lga-select')
+  selectedLGA = null
+})
+
+const lgaMarkersRoot = new TransformNode('lgaMarkersRoot', scene)
+lgaMarkersRoot.parent = nigeriaRoot
+
+function createLGAMarker(name: IgboLGA, color: Color3, position: Vector3, onPick: () => void) {
+  const marker = MeshBuilder.CreateSphere(`${name}-lga`, { diameter: 0.5 }, scene)
+  marker.position = position
+  const mat = new StandardMaterial(`${name}-lga-mat`, scene)
+  mat.diffuseColor = color
+  mat.emissiveColor = color.scale(0.3)
+  marker.material = mat
+  marker.metadata = { onPick }
+  marker.parent = lgaMarkersRoot
+  marker.isPickable = true
+  createLabel(name, position.add(new Vector3(0, 0.6, 0)), lgaMarkersRoot, '#f9e6be')
+  return marker
+}
+
+createLGAMarker('Owerri', new Color3(0.4, 0.65, 0.35), new Vector3(-2, 0.5, 3), () => {
+  selectedLGA = 'Owerri'
   resetTribeMission('Igbo')
   setState('village')
-  walkCamera.position = new Vector3(0, 2, -18)
+  walkCamera.position = new Vector3(8, 2, -18)
+})
+
+createLGAMarker('Arochukwu', new Color3(0.5, 0.58, 0.4), new Vector3(0.5, 0.5, 4.5), () => {
+  selectedLGA = 'Arochukwu'
+  resetTribeMission('Igbo')
+  setState('village')
+  walkCamera.position = new Vector3(20, 2, -15)
+})
+
+createLGAMarker('Onitsha', new Color3(0.45, 0.6, 0.5), new Vector3(3, 0.5, 2), () => {
+  selectedLGA = 'Onitsha'
+  resetTribeMission('Igbo')
+  setState('village')
+  walkCamera.position = new Vector3(-8, 2, -20)
 })
 
 const ground = MeshBuilder.CreateGround('villageGround', { width: 80, height: 80 }, scene)
@@ -688,6 +812,67 @@ storyPositions.forEach((pos, index) => {
   stone.metadata = { symbol: storySymbols[index] }
   storyStones.push(stone)
 })
+
+// Arochukwu zone: ancient story stones with deeper cultural lessons
+const arochukwuCircle = MeshBuilder.CreateCylinder('arochukwuCircle', { diameter: 6, height: 0.1 }, scene)
+arochukwuCircle.position = new Vector3(20, 0.05, -18)
+const arochukwuCircleMat = new StandardMaterial('arochukwuCircleMat', scene)
+arochukwuCircleMat.diffuseColor = new Color3(0.28, 0.24, 0.2)
+arochukwuCircle.material = arochukwuCircleMat
+arochukwuCircle.parent = arochukwuZone
+
+const arochukwuStones: Mesh[] = []
+const arochukwuSymbols = ['Oracle', 'Pilgrimage', 'Unity']
+const arochukwuPositions = [
+  new Vector3(16, 0.7, -16),
+  new Vector3(24, 0.7, -14),
+  new Vector3(20, 0.7, -22),
+]
+
+arochukwuPositions.forEach((pos, index) => {
+  const stone = MeshBuilder.CreateBox(`arochukwuStone-${index}`, { width: 1.5, height: 1.1, depth: 1.5 }, scene)
+  stone.position = pos
+  const stoneMat = new StandardMaterial(`arochukwuStoneMat-${index}`, scene)
+  stoneMat.diffuseColor = new Color3(0.35, 0.28, 0.22)
+  stone.material = stoneMat
+  stone.parent = arochukwuZone
+  stone.metadata = { symbol: arochukwuSymbols[index] }
+  arochukwuStones.push(stone)
+})
+
+// Onitsha zone: river trade and fabric weaving
+const riverMarker = MeshBuilder.CreateCylinder('riverMarker', { diameter: 8, height: 0.1 }, scene)
+riverMarker.position = new Vector3(-10, 0.05, -16)
+const riverMat = new StandardMaterial('riverMat', scene)
+riverMat.diffuseColor = new Color3(0.15, 0.35, 0.45)
+riverMarker.material = riverMat
+riverMarker.parent = onitshZone
+
+const weavingLoom = MeshBuilder.CreateBox('weavingLoom', { width: 2.5, height: 2, depth: 1 }, scene)
+weavingLoom.position = new Vector3(-10, 1.1, -8)
+const loomMat = new StandardMaterial('loomMat', scene)
+loomMat.diffuseColor = new Color3(0.5, 0.35, 0.2)
+weavingLoom.material = loomMat
+weavingLoom.parent = onitshZone
+
+// Onitsha trade goods: indigo dye cloths
+const indigoMeshes: Mesh[] = []
+
+function createIndigoCloth(position: Vector3, parent: TransformNode) {
+  const cloth = MeshBuilder.CreateBox('indigo', { width: 1.4, height: 0.4, depth: 1.4 }, scene)
+  cloth.position = position
+  const mat = new StandardMaterial('indigo-mat', scene)
+  mat.diffuseColor = new Color3(0.1, 0.2, 0.4)
+  mat.emissiveColor = new Color3(0.05, 0.1, 0.25)
+  cloth.material = mat
+  cloth.parent = parent
+  indigoMeshes.push(cloth)
+  return cloth
+}
+
+createIndigoCloth(new Vector3(-14, 0.5, -20), onitshZone)
+createIndigoCloth(new Vector3(-6, 0.5, -22), onitshZone)
+createIndigoCloth(new Vector3(-12, 0.5, -10), onitshZone)
 
 const yorubaDrumRing = MeshBuilder.CreateCylinder('yorubaDrumRing', { diameter: 4.5, height: 0.2 }, scene)
 yorubaDrumRing.position = new Vector3(-10, 0.1, 14)
@@ -876,17 +1061,26 @@ drumMat.emissiveColor = new Color3(0.2, 0.1, 0.04)
 festivalDrum.material = drumMat
 festivalDrum.parent = festivalRoot
 
+// Ambient animations: banner sway and drum glow pulse
+let bannerSwayTime = 0
+let drumGlowTime = 0
+
 function setState(next: GameState) {
   state = next
   const activeTribe = getActiveTribe()
+  const activeLGA = selectedLGA ?? 'Owerri'
 
   hubMarkersRoot.setEnabled(state === 'hub')
   africaMarkersRoot.setEnabled(state === 'africa')
   sharedRoot.setEnabled(state === 'hub' || state === 'africa')
+  nigeriaRoot.setEnabled(state === 'nigeria' || state === 'lga-select')
+  lgaMarkersRoot.setEnabled(state === 'lga-select')
   villageRoot.setEnabled(state === 'village' || state === 'festival')
   festivalRoot.setEnabled(state === 'festival')
-  nigeriaRoot.setEnabled(state === 'nigeria')
   igboRoot.setEnabled(state === 'village' || state === 'festival' ? activeTribe === 'Igbo' : false)
+  owrerriZone.setEnabled(activeTribe === 'Igbo' && activeLGA === 'Owerri' && (state === 'village' || state === 'festival'))
+  arochukwuZone.setEnabled(activeTribe === 'Igbo' && activeLGA === 'Arochukwu' && (state === 'village' || state === 'festival'))
+  onitshZone.setEnabled(activeTribe === 'Igbo' && activeLGA === 'Onitsha' && (state === 'village' || state === 'festival'))
   yorubaRoot.setEnabled(state === 'village' || state === 'festival' ? activeTribe === 'Yoruba' : false)
   hausaRoot.setEnabled(state === 'village' || state === 'festival' ? activeTribe === 'Hausa' : false)
 
@@ -941,6 +1135,23 @@ function setState(next: GameState) {
     setRecapVisible(false)
   }
 
+  if (state === 'lga-select') {
+    scene.activeCamera = arcCamera
+    arcCamera.attachControl(canvas, true)
+    walkCamera.detachControl()
+    uiCrosshair.classList.add('hidden')
+    uiChoices.classList.add('hidden')
+    arcCamera.beta = Math.PI / 3.2
+    desiredTarget = new Vector3(0, 0, 0)
+    desiredRadius = 12
+    setTitle('Nigeria - Igbo', 'Choose a Local Government Area.')
+    setObjective('Select Owerri, Arochukwu, or Onitsha.')
+    setHint('Each LGA has its own cultural mission.')
+    setAction('Back to Nigeria', () => setState('nigeria'))
+    setTutorial('Each LGA offers distinct cultural missions. Choose one to begin.')
+    setRecapVisible(false)
+  }
+
   if (state === 'village') {
     scene.activeCamera = walkCamera
     walkCamera.attachControl(canvas, true)
@@ -972,27 +1183,61 @@ function setState(next: GameState) {
 function updateMissionUI() {
   if (state !== 'village') return
   const activeTribe = getActiveTribe()
+  const activeLGA = selectedLGA ?? 'Owerri'
 
   if (activeTribe === 'Igbo') {
-    if (igboMission.cookingStage > 0 && !igboMission.cookingDone) {
+    if (activeLGA === 'Owerri') {
+      // Owerri: Original yam and kola collection mission
+      if (igboMission.cookingStage > 0 && !igboMission.cookingDone) {
+        return
+      }
+
+      if (!igboMission.cookingDone) {
+        const progress = `Yams ${igboMission.yamsCollected}/${igboMission.yamsNeeded} · Kola ${igboMission.kolaCollected}/${igboMission.kolaNeeded}`
+        setObjective('Collect yams and kola nuts for the New Yam Festival.', progress)
+        return
+      }
+
+      if (!igboMission.delivered) {
+        setObjective('Deliver the prepared dishes to the elders.', 'Find the elders near the village circle.')
+        return
+      }
+
+      setObjective('The festival is ready!', 'Celebrate and explore the village.')
       return
     }
 
-    if (!igboMission.cookingDone) {
-      const progress = `Yams ${igboMission.yamsCollected}/${igboMission.yamsNeeded} · Kola ${igboMission.kolaCollected}/${igboMission.kolaNeeded}`
-      setObjective('Collect yams and kola nuts for the New Yam Festival.', progress)
+    if (activeLGA === 'Arochukwu') {
+      // Arochukwu: Story stones puzzle
+      if (arochukwuMission.stonePuzzleDone) {
+        setObjective('The mysteries are unlocked!', 'Visit the Oracle shrine to honor the pillars of unity.')
+        return
+      }
+
+      if (arochukwuMission.stonesFound > 0) {
+        const progress = `Symbols found ${arochukwuMission.stonesFound}/${arochukwuMission.stonesNeeded}`
+        setObjective('Complete the ancient stone puzzle.', progress)
+        return
+      }
+
+      setObjective('Seek the wisdom of Arochukwu.', 'Find the sacred stones and unlock their secrets.')
       return
     }
 
-    if (!igboMission.delivered) {
-      setObjective('Deliver the prepared dishes to the elders.', 'Find the elders near the village circle.')
+    if (activeLGA === 'Onitsha') {
+      // Onitsha: River trade and indigo weaving
+      if (igboMission.fabricWoven >= igboMission.fabricNeeded) {
+        setObjective('The indigo trade is complete!', 'Celebrate the successful commerce and craftsmanship.')
+        return
+      }
+
+      const progress = `Indigo cloths collected ${igboMission.fabricWoven}/${igboMission.fabricNeeded}`
+      setObjective('Collect indigo cloths from the river traders.', progress)
       return
     }
-
-    setObjective('The festival is ready!', 'Celebrate and explore the village.')
-    return
   }
 
+  // Yoruba and Hausa remain unchanged
   if (activeTribe === 'Yoruba') {
     if (!yorubaMission.rhythmDone) {
       if (yorubaMission.sticksCollected < yorubaMission.sticksNeeded) {
@@ -1046,48 +1291,112 @@ scene.onPointerObservable.add((pointerInfo) => {
 
   if (state === 'village') {
     const activeTribe = getActiveTribe()
+    const activeLGA = selectedLGA ?? 'Owerri'
 
     if (activeTribe === 'Igbo') {
-      if (yamMeshes.includes(pickedMesh)) {
-        pickedMesh.dispose()
-        igboMission.yamsCollected += 1
-        updateMissionUI()
-        showToast('Yam collected')
-        playTone(520, 0.12, 'triangle', 0.05)
-        if (igboMission.yamsCollected >= igboMission.yamsNeeded && igboMission.kolaCollected >= igboMission.kolaNeeded) {
-          showToast('All ingredients collected')
-          playTone(740, 0.18, 'triangle', 0.05)
-        }
-      }
-
-      if (kolaMeshes.includes(pickedMesh)) {
-        pickedMesh.dispose()
-        igboMission.kolaCollected += 1
-        updateMissionUI()
-        showToast('Kola nut collected')
-        playTone(560, 0.12, 'triangle', 0.05)
-        if (igboMission.yamsCollected >= igboMission.yamsNeeded && igboMission.kolaCollected >= igboMission.kolaNeeded) {
-          showToast('All ingredients collected')
-          playTone(740, 0.18, 'triangle', 0.05)
-        }
-      }
-
-      if (storyStones.includes(pickedMesh) && !igboMission.storyDone && igboMission.storyStage > 0) {
-        const symbol = metadata?.symbol
-        const expected = storySymbols[igboMission.storyStage - 1]
-        if (symbol === expected) {
-          igboMission.storyStage += 1
-          showToast(`Story stone: ${symbol}`)
-          if (igboMission.storyStage > storySymbols.length) {
-            igboMission.storyDone = true
-            setHint('Arochukwu stories speak of unity and sacred heritage.')
-            setAction(null, null)
-            playTone(820, 0.2, 'sine', 0.06)
+      if (activeLGA === 'Owerri') {
+        // Owerri: Yams, Kola, Story stones
+        if (yamMeshes.includes(pickedMesh)) {
+          pickedMesh.dispose()
+          igboMission.yamsCollected += 1
+          updateMissionUI()
+          showToast('Yam collected')
+          playTone(520, 0.12, 'triangle', 0.05)
+          
+          if (igboMission.yamsCollected === 1) {
+            showCulturalPopup(
+              'New Yam Festival',
+              'Igbo Tradition',
+              'The New Yam Festival marks the annual harvest season when yams—a staple crop—are first eaten ceremonially. Families gather to give thanks for abundance and to honor their ancestors. This tradition reinforces community bonds and celebrates agricultural success.'
+            )
           }
-        } else {
-          igboMission.storyStage = 1
-          showToast('The story resets. Try the first symbol again.')
-          playTone(220, 0.12, 'sine', 0.04)
+          
+          if (igboMission.yamsCollected >= igboMission.yamsNeeded && igboMission.kolaCollected >= igboMission.kolaNeeded) {
+            showToast('All ingredients collected')
+            playTone(740, 0.18, 'triangle', 0.05)
+          }
+        }
+
+        if (kolaMeshes.includes(pickedMesh)) {
+          pickedMesh.dispose()
+          igboMission.kolaCollected += 1
+          updateMissionUI()
+          showToast('Kola nut collected')
+          playTone(560, 0.12, 'triangle', 0.05)
+          
+          if (igboMission.kolaCollected === 1) {
+            showCulturalPopup(
+              'Kola Nut Ceremony',
+              'Igbo Tradition',
+              'Kola nuts hold deep spiritual significance in Igbo culture. Offering kola is a symbol of welcome, respect, and hospitality. Breaking and sharing kola nuts opens conversations and seals agreements. During festivals, kola is presented to elders and guests as a sign of honor.'
+            )
+          }
+          
+          if (igboMission.yamsCollected >= igboMission.yamsNeeded && igboMission.kolaCollected >= igboMission.kolaNeeded) {
+            showToast('All ingredients collected')
+            playTone(740, 0.18, 'triangle', 0.05)
+          }
+        }
+      }
+
+      if (activeLGA === 'Arochukwu') {
+        // Arochukwu: Story stones
+        if (arochukwuStones.includes(pickedMesh) && arochukwuMission.stonesFound > 0) {
+          const symbol = metadata?.symbol
+          const expected = arochukwuSymbols[arochukwuMission.stonesFound - 1]
+          if (symbol === expected) {
+            arochukwuMission.stonesFound += 1
+            showToast(`Story symbol: ${symbol}`)
+            playTone(620, 0.12, 'sine', 0.05)
+            
+            if (arochukwuMission.stonesFound === 2) {
+              showCulturalPopup(
+                'Sacred Pilgrimage',
+                'Arochukwu Mysteries',
+                'Arochukwu was a powerful spiritual center where pilgrims journeyed to seek wisdom and blessing. The Ibini Ukpabi (the oracle) was consulted for guidance during difficult times. Pilgrims traveled from distant lands to participate in sacred rituals and receive divine counsel.'
+              )
+            }
+            
+            if (arochukwuMission.stonesFound > arochukwuSymbols.length) {
+              arochukwuMission.stonePuzzleDone = true
+              setHint('Arochukwu stories speak of sacred pilgrimages and unity beyond borders.')
+              showCulturalPopup(
+                'Arochukwu Unity',
+                'Ancient Wisdom',
+                'The oracle at Arochukwu brought together diverse peoples in spiritual unity. Regardless of tribe or origin, all came to seek truth and justice. This tradition of seeking wisdom collectively shaped the cultural identity of the Igbo people.'
+              )
+              playTone(820, 0.2, 'sine', 0.06)
+              updateMissionUI()
+            }
+          } else {
+            arochukwuMission.stonesFound = 1
+            showToast('The sequence resets. Try again.')
+            playTone(220, 0.12, 'sine', 0.04)
+          }
+        }
+      }
+
+      if (activeLGA === 'Onitsha') {
+        // Onitsha: Indigo cloths
+        if (indigoMeshes.includes(pickedMesh)) {
+          pickedMesh.dispose()
+          igboMission.fabricWoven += 1
+          updateMissionUI()
+          showToast('Indigo cloth collected')
+          playTone(480, 0.12, 'triangle', 0.05)
+          
+          if (igboMission.fabricWoven === 1) {
+            showCulturalPopup(
+              'Indigo Trade',
+              'Onitsha Commerce',
+              'Onitsha sits on the Niger River, making it a major trading hub for centuries. Indigo-dyed cloth was a premium trade good, highly valued for its rich color and cultural significance. Weavers and traders transformed Onitsha into a center of commerce connecting inland communities with river traders.'
+            )
+          }
+          
+          if (igboMission.fabricWoven >= igboMission.fabricNeeded) {
+            showToast('All trade goods collected!')
+            playTone(740, 0.18, 'triangle', 0.05)
+          }
         }
       }
     }
@@ -1099,6 +1408,14 @@ scene.onPointerObservable.add((pointerInfo) => {
         updateMissionUI()
         showToast('Drum stick collected')
         playTone(640, 0.12, 'triangle', 0.05)
+        
+        if (yorubaMission.sticksCollected === 1) {
+          showCulturalPopup(
+            'Talking Drum',
+            'Yoruba Tradition',
+            'The talking drum (dundun) is central to Yoruba communication and culture. Skilled drummers use tonal variations to "speak" messages across distances. Instead of words, the drum conveys meaning through rhythm and pitch, making it a sophisticated language of its own.'
+          )
+        }
       }
     }
 
@@ -1109,6 +1426,14 @@ scene.onPointerObservable.add((pointerInfo) => {
         updateMissionUI()
         showToast('Fabric collected')
         playTone(480, 0.12, 'triangle', 0.05)
+        
+        if (hausaMission.fabricCollected === 1) {
+          showCulturalPopup(
+            'Adire & Durbar',
+            'Hausa Tradition',
+            'The Durbar Festival is a grand procession celebrating Hausa leadership, heritage, and community pride. Horses are adorned with richly colored fabrics, and participants wear traditional indigo and embroidered garments. The festival honors the Emir and brings the entire community together in celebration.'
+          )
+        }
       }
 
       if (flagMeshes.includes(pickedMesh)) {
@@ -1126,46 +1451,96 @@ function updateInteractions() {
   if (state !== 'village') return
 
   const activeTribe = getActiveTribe()
+  const activeLGA = selectedLGA ?? 'Owerri'
   const playerPos = walkCamera.position
 
   if (activeTribe === 'Igbo') {
-    if (igboMission.cookingStage > 0 && !igboMission.cookingDone) {
-      return
-    }
+    if (activeLGA === 'Owerri') {
+      // Owerri: Yam/kola collection and cooking
+      if (igboMission.cookingStage > 0 && !igboMission.cookingDone) {
+        return
+      }
 
-    const distanceToCooking = Vector3.Distance(playerPos, cookingStation.position)
-    const distanceToElder = Vector3.Distance(playerPos, elder.position)
-    const distanceToStory = Vector3.Distance(playerPos, storyCircle.position)
+      const distanceToCooking = Vector3.Distance(playerPos, cookingStation.position)
+      const distanceToElder = Vector3.Distance(playerPos, elder.position)
 
-    if (!igboMission.cookingDone && igboMission.yamsCollected >= igboMission.yamsNeeded && igboMission.kolaCollected >= igboMission.kolaNeeded) {
-      setObjective('Bring your ingredients to the kitchen.', 'Step to the cooking station.')
-      if (distanceToCooking < 4) {
-        setAction('Start cooking', () => {
-          igboMission.cookingStage = 1
-          updateCookingStep()
+      if (!igboMission.cookingDone && igboMission.yamsCollected >= igboMission.yamsNeeded && igboMission.kolaCollected >= igboMission.kolaNeeded) {
+        setObjective('Bring your ingredients to the kitchen.', 'Step to the cooking station.')
+        if (distanceToCooking < 4) {
+          setAction('Start cooking', () => {
+            igboMission.cookingStage = 1
+            updateCookingStep()
+          })
+          return
+        }
+      }
+
+      if (igboMission.cookingDone && !igboMission.delivered && distanceToElder < 4) {
+        setAction('Deliver dishes', () => {
+          igboMission.delivered = true
+          setState('festival')
         })
         return
       }
-    }
 
-    if (igboMission.cookingDone && !igboMission.delivered && distanceToElder < 4) {
-      setAction('Deliver dishes', () => {
-        igboMission.delivered = true
-        setState('festival')
-      })
+      setAction(null, null)
       return
     }
 
-    if (!igboMission.storyDone && igboMission.storyStage === 0 && distanceToStory < 5) {
-      setAction('Start story puzzle', () => {
-        igboMission.storyStage = 1
-        setHint('Tap the stones in this order: Moon, River, Mask.')
+    if (activeLGA === 'Arochukwu') {
+      // Arochukwu: Story stones puzzle
+      const distanceToCircle = Vector3.Distance(playerPos, arochukwuCircle.position)
+
+      if (!arochukwuMission.stonePuzzleDone && distanceToCircle < 5) {
+        if (arochukwuMission.stonesFound === 0) {
+          setAction('Begin the puzzle', () => {
+            arochukwuMission.stonesFound = 1
+            setHint('Tap the stones: Oracle → Pilgrimage → Unity.')
+          })
+        } else {
+          setAction(null, null)
+        }
+        return
+      }
+
+      if (arochukwuMission.stonePuzzleDone) {
+        setAction('Complete mission', () => {
+          setState('festival')
+        })
+      } else {
         setAction(null, null)
-      })
+      }
+      return
+    }
+
+    if (activeLGA === 'Onitsha') {
+      // Onitsha: Indigo cloth collection
+      if (igboMission.fabricWoven >= igboMission.fabricNeeded) {
+        setAction('Complete trade', () => {
+          setState('festival')
+        })
+        return
+      }
+
+      const distanceToLoom = Vector3.Distance(playerPos, weavingLoom.position)
+      if (distanceToLoom < 4) {
+        setAction('Collect indigo', () => {
+          if (igboMission.fabricWoven < igboMission.fabricNeeded) {
+            igboMission.fabricWoven += 1
+            updateMissionUI()
+            showToast('Indigo cloth collected')
+            playTone(540, 0.12, 'triangle', 0.05)
+          }
+        })
+        return
+      }
+
+      setAction(null, null)
       return
     }
   }
 
+  // Yoruba and Hausa remain unchanged
   if (activeTribe === 'Yoruba') {
     if (yorubaMission.rhythmActive) {
       return
@@ -1262,6 +1637,27 @@ scene.onBeforeRenderObservable.add(() => {
     const lerp = 0.06
     arcCamera.setTarget(Vector3.Lerp(arcCamera.target, desiredTarget, lerp))
     arcCamera.radius = arcCamera.radius + (desiredRadius - arcCamera.radius) * lerp
+  }
+
+  // Ambient animations
+  if (state === 'village' || state === 'festival') {
+    bannerSwayTime += 0.01
+    drumGlowTime += 0.015
+
+    // Banner sway: subtle rotation side-to-side
+    const banners = scene.getMeshesById('bannerCloth')
+    banners.forEach((banner) => {
+      banner.rotation.z = Math.sin(bannerSwayTime) * 0.05
+    })
+
+    // Drum glow pulse: oscillating emissive intensity
+    const drums = [yorubaDrum, festivalDrum]
+    drums.forEach((drum) => {
+      if (drum && drum.material instanceof StandardMaterial) {
+        const glowIntensity = 0.04 + Math.sin(drumGlowTime) * 0.06
+        drum.material.emissiveColor = new Color3(0.2 * (1 + glowIntensity), 0.1 * (1 + glowIntensity), 0.04 * (1 + glowIntensity))
+      }
+    })
   }
 })
 
