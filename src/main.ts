@@ -60,8 +60,8 @@ let audioEnabled = false
 let photoModeActive = false
 let photoModeCamera: UniversalCamera | null = null
 
-type GameState = 'hub' | 'africa' | 'nigeria' | 'kenya' | 'lga-select' | 'village' | 'festival'
-type Tribe = 'Igbo' | 'Yoruba' | 'Hausa' | 'Maasai'
+type GameState = 'hub' | 'africa' | 'nigeria' | 'kenya' | 'egypt' | 'lga-select' | 'village' | 'festival'
+type Tribe = 'Igbo' | 'Yoruba' | 'Hausa' | 'Maasai' | 'Egyptian'
 type IgboLGA = 'Owerri' | 'Arochukwu' | 'Onitsha'
 
 let state: GameState = 'hub'
@@ -120,6 +120,16 @@ const maasaiMission = {
   ceremonyDone: false,
   danceSteps: 0,
   danceNeeded: 4,
+}
+
+const egyptianMission = {
+  chalicesCollected: 0,
+  scarabsCollected: 0,
+  tabletsCollected: 0,
+  artifactsNeeded: 3,
+  celestialDone: false,
+  alignmentSteps: 0,
+  alignmentNeeded: 3,
 }
 
 function setAction(label: string | null, handler: (() => void) | null) {
@@ -326,6 +336,30 @@ window.addEventListener('keydown', (event) => {
   }
 })
 
+window.addEventListener('keydown', (event) => {
+  if (event.code === 'KeyW') walkInput.forward = true
+  if (event.code === 'KeyS') walkInput.back = true
+  if (event.code === 'KeyA') walkInput.left = true
+  if (event.code === 'KeyD') walkInput.right = true
+  if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') walkInput.sprint = true
+})
+
+window.addEventListener('keyup', (event) => {
+  if (event.code === 'KeyW') walkInput.forward = false
+  if (event.code === 'KeyS') walkInput.back = false
+  if (event.code === 'KeyA') walkInput.left = false
+  if (event.code === 'KeyD') walkInput.right = false
+  if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') walkInput.sprint = false
+})
+
+window.addEventListener('blur', () => {
+  walkInput.forward = false
+  walkInput.back = false
+  walkInput.left = false
+  walkInput.right = false
+  walkInput.sprint = false
+})
+
 const light = new HemisphericLight('light', new Vector3(0, 1, 0), scene)
 light.intensity = 0.95
 
@@ -338,13 +372,31 @@ arcCamera.panningSensibility = 0
 const defaultArcBeta = arcCamera.beta
 
 const walkCamera = new UniversalCamera('walkCamera', new Vector3(0, 2, -10), scene)
-walkCamera.speed = 0.35
-walkCamera.angularSensibility = 4000
+walkCamera.speed = 0
+walkCamera.angularSensibility = 3200
 walkCamera.minZ = 0.1
-walkCamera.keysUp.push(87)
-walkCamera.keysDown.push(83)
-walkCamera.keysLeft.push(65)
-walkCamera.keysRight.push(68)
+walkCamera.inertia = 0
+walkCamera.keysUp.length = 0
+walkCamera.keysDown.length = 0
+walkCamera.keysLeft.length = 0
+walkCamera.keysRight.length = 0
+
+const walkInput = {
+  forward: false,
+  back: false,
+  left: false,
+  right: false,
+  sprint: false,
+}
+
+const walkVelocity = new Vector3(0, 0, 0)
+const walkConfig = {
+  accel: 12,
+  damping: 14,
+  maxSpeed: 4.2,
+  sprintMultiplier: 1.6,
+  eyeHeight: 2,
+}
 
 scene.activeCamera = arcCamera
 
@@ -353,6 +405,7 @@ const hubMarkersRoot = new TransformNode('hubMarkersRoot', scene)
 const africaMarkersRoot = new TransformNode('africaMarkersRoot', scene)
 const nigeriaRoot = new TransformNode('nigeriaRoot', scene)
 const kenyaRoot = new TransformNode('kenyaRoot', scene)
+const egyptRoot = new TransformNode('egyptRoot', scene)
 const villageRoot = new TransformNode('villageRoot', scene)
 const igboRoot = new TransformNode('igboRoot', scene)
 const owrerriZone = new TransformNode('owrerriZone', scene)
@@ -361,6 +414,7 @@ const onitshZone = new TransformNode('onitshZone', scene)
 const yorubaRoot = new TransformNode('yorubaRoot', scene)
 const hausaRoot = new TransformNode('hausaRoot', scene)
 const maasaiRoot = new TransformNode('maasaiRoot', scene)
+const egyptianRoot = new TransformNode('egyptianRoot', scene)
 const festivalRoot = new TransformNode('festivalRoot', scene)
 
 igboRoot.parent = villageRoot
@@ -370,6 +424,7 @@ onitshZone.parent = igboRoot
 yorubaRoot.parent = villageRoot
 hausaRoot.parent = villageRoot
 maasaiRoot.parent = villageRoot
+egyptianRoot.parent = villageRoot
 
 function createSkyDome() {
   const texture = new DynamicTexture('skyTexture', { width: 512, height: 512 }, scene, false)
@@ -542,6 +597,16 @@ const kenyaMarker = createMarker(
 kenyaMarker.isPickable = true
 createLabel('Kenya', kenyaMarker.position.add(new Vector3(0, 0.9, 0)), africaMarkersRoot, '#d4f1d4')
 
+const egyptMarker = createMarker(
+  'egypt',
+  new Color3(0.8, 0.7, 0.2),
+  sphericalPosition(5.35, 20, 30),
+  africaMarkersRoot,
+  () => setState('egypt')
+)
+egyptMarker.isPickable = true
+createLabel('Egypt', egyptMarker.position.add(new Vector3(0, 0.9, 0)), africaMarkersRoot, '#fff9e6')
+
 const nigeriaBase = MeshBuilder.CreateBox('nigeriaBase', { width: 12, height: 0.5, depth: 8 }, scene)
 nigeriaBase.position = new Vector3(0, -0.3, 0)
 const nigeriaBaseMat = new StandardMaterial('nigeriaBaseMat', scene)
@@ -711,6 +776,83 @@ function createKenyaTribeMarker(name: Tribe, color: Color3, position: Vector3, o
 createKenyaTribeMarker('Maasai', new Color3(0.8, 0.2, 0.2), new Vector3(-1.5, 0.6, 1), () => {
   selectedTribe = 'Maasai'
   resetTribeMission('Maasai')
+  setState('village')
+  walkCamera.position = new Vector3(0, 2, -18)
+})
+
+// Egypt setup
+const egyptBase = MeshBuilder.CreateBox('egyptBase', { width: 12, height: 0.5, depth: 8 }, scene)
+egyptBase.position = new Vector3(0, -0.3, 0)
+const egyptBaseMat = new StandardMaterial('egyptBaseMat', scene)
+egyptBaseMat.diffuseColor = new Color3(0.8, 0.7, 0.2)
+egyptBaseMat.specularColor = new Color3(0.2, 0.18, 0.1)
+egyptBase.material = egyptBaseMat
+egyptBase.parent = egyptRoot
+
+const egyptMapTexture = new DynamicTexture('egyptMapTexture', { width: 512, height: 512 }, scene, false)
+const egyptMapCtx = egyptMapTexture.getContext() as CanvasRenderingContext2D
+egyptMapCtx.fillStyle = '#d4a574'
+egyptMapCtx.fillRect(0, 0, 512, 512)
+
+// Draw Nile river
+egyptMapCtx.fillStyle = '#4a90e2'
+egyptMapCtx.beginPath()
+egyptMapCtx.moveTo(256, 50)
+egyptMapCtx.quadraticCurveTo(260, 200, 256, 400)
+egyptMapCtx.lineWidth = 40
+egyptMapCtx.stroke()
+
+// Draw pyramid region markers
+egyptMapCtx.fillStyle = '#e8c547'
+egyptMapCtx.beginPath()
+egyptMapCtx.arc(150, 150, 60, 0, Math.PI * 2)
+egyptMapCtx.fill()
+egyptMapCtx.fillStyle = '#333'
+egyptMapCtx.font = 'bold 24px Arial'
+egyptMapCtx.textAlign = 'center'
+egyptMapCtx.textBaseline = 'middle'
+egyptMapCtx.fillText('Giza', 150, 150)
+
+// Draw pharaoh temple area
+egyptMapCtx.fillStyle = '#d4a238'
+egyptMapCtx.beginPath()
+egyptMapCtx.arc(350, 200, 50, 0, Math.PI * 2)
+egyptMapCtx.fill()
+egyptMapCtx.fillStyle = '#333'
+egyptMapCtx.fillText('Temples', 350, 200)
+
+// Title
+egyptMapCtx.fillStyle = '#333'
+egyptMapCtx.font = 'bold 32px Arial'
+egyptMapCtx.fillText('EGYPT', 256, 450)
+
+egyptMapTexture.update()
+const egyptMap = MeshBuilder.CreateBox('egyptMap', { width: 12, height: 8, depth: 0.1 }, scene)
+egyptMap.position = new Vector3(0, 3, -0.05)
+const egyptMapMat = new StandardMaterial('egyptMapMat', scene)
+egyptMapMat.emissiveTexture = egyptMapTexture
+egyptMap.material = egyptMapMat
+egyptMap.parent = egyptRoot
+
+const egyptTribeMarkersRoot = new TransformNode('egyptTribeMarkersRoot', scene)
+egyptTribeMarkersRoot.parent = egyptRoot
+
+function createEgyptTribeMarker(name: Tribe, color: Color3, position: Vector3, onPick: () => void) {
+  const marker = MeshBuilder.CreateSphere(`${name}-egypt-tribe`, { diameter: 0.6 }, scene)
+  marker.position = position
+  const mat = new StandardMaterial(`${name}-egypt-tribe-mat`, scene)
+  mat.diffuseColor = color
+  mat.emissiveColor = color.scale(0.3)
+  marker.material = mat
+  marker.metadata = { onPick }
+  marker.parent = egyptTribeMarkersRoot
+  createLabel(name, position.add(new Vector3(0, 0.7, 0)), egyptTribeMarkersRoot, '#f9e6be')
+  return marker
+}
+
+createEgyptTribeMarker('Egyptian', new Color3(0.85, 0.7, 0.2), new Vector3(-1.2, 0.6, 1), () => {
+  selectedTribe = 'Egyptian'
+  resetTribeMission('Egyptian')
   setState('village')
   walkCamera.position = new Vector3(0, 2, -18)
 })
@@ -917,11 +1059,27 @@ arochukwuPositions.forEach((pos, index) => {
   stone.position = pos
   const stoneMat = new StandardMaterial(`arochukwuStoneMat-${index}`, scene)
   stoneMat.diffuseColor = new Color3(0.35, 0.28, 0.22)
+  stoneMat.emissiveColor = new Color3(0.1, 0.08, 0.06)
   stone.material = stoneMat
   stone.parent = arochukwuZone
   stone.metadata = { symbol: arochukwuSymbols[index] }
   arochukwuStones.push(stone)
+  createLabel(arochukwuSymbols[index], pos.add(new Vector3(0, 1.2, 0)), arochukwuZone, '#f2e9d4')
 })
+
+function updateArochukwuHighlight() {
+  const expected = arochukwuSymbols[arochukwuMission.stonesFound]
+  arochukwuStones.forEach((stone) => {
+    const symbol = (stone.metadata as { symbol?: string } | undefined)?.symbol
+    const mat = stone.material as StandardMaterial
+    if (!mat) return
+    if (symbol && symbol === expected) {
+      mat.emissiveColor = new Color3(0.6, 0.45, 0.25)
+    } else {
+      mat.emissiveColor = new Color3(0.1, 0.08, 0.06)
+    }
+  })
+}
 
 // Onitsha zone: river trade and fabric weaving
 const riverMarker = MeshBuilder.CreateCylinder('riverMarker', { diameter: 8, height: 0.1 }, scene)
@@ -999,6 +1157,9 @@ const flagMeshes: Mesh[] = []
 const beadRedMeshes: Mesh[] = []
 const beadGreenMeshes: Mesh[] = []
 const beadBlueMeshes: Mesh[] = []
+const chaliceMeshes: Mesh[] = []
+const scarabMeshes: Mesh[] = []
+const tabletMeshes: Mesh[] = []
 
 function createCollectible(name: string, color: Color3, position: Vector3, targetArray: Mesh[]) {
   const item = MeshBuilder.CreateSphere(name, { diameter: 0.8 }, scene)
@@ -1133,6 +1294,109 @@ redBeadPos.forEach(pos => createBead(pos, new Color3(0.8, 0.2, 0.2), beadRedMesh
 greenBeadPos.forEach(pos => createBead(pos, new Color3(0.2, 0.7, 0.2), beadGreenMeshes))
 blueBeadPos.forEach(pos => createBead(pos, new Color3(0.2, 0.4, 0.8), beadBlueMeshes))
 
+// Egyptian temple village
+const templeGround = MeshBuilder.CreateCylinder('templeGround', { diameter: 15, height: 0.1 }, scene)
+templeGround.position = new Vector3(0, 0.05, 0)
+const templeGroundMat = new StandardMaterial('templeGroundMat', scene)
+templeGroundMat.diffuseColor = new Color3(0.8, 0.75, 0.65)
+templeGround.material = templeGroundMat
+templeGround.parent = egyptianRoot
+
+// Central pyramid structure
+const pyramidBase = MeshBuilder.CreateCylinder('pyramidBase', { diameter: 6, height: 0.5 }, scene)
+pyramidBase.position = new Vector3(0, 0.25, 0)
+const pyramidBaseMat = new StandardMaterial('pyramidBaseMat', scene)
+pyramidBaseMat.diffuseColor = new Color3(0.9, 0.85, 0.75)
+pyramidBase.material = pyramidBaseMat
+pyramidBase.parent = egyptianRoot
+
+const pyramidPoint = MeshBuilder.CreateSphere('pyramidPoint', { diameter: 6 }, scene)
+pyramidPoint.position = new Vector3(0, 3, 0)
+pyramidPoint.scaling = new Vector3(1, 1.5, 1)
+const pyramidPointMat = new StandardMaterial('pyramidPointMat', scene)
+pyramidPointMat.diffuseColor = new Color3(0.95, 0.88, 0.72)
+pyramidPoint.material = pyramidPointMat
+pyramidPoint.parent = egyptianRoot
+
+// Temple columns (seated at pyramid base)
+const templeColumnPositions = [
+  new Vector3(-2.5, 1.5, -2),
+  new Vector3(2.5, 1.5, -2),
+  new Vector3(-2.5, 1.5, 2),
+  new Vector3(2.5, 1.5, 2),
+]
+
+templeColumnPositions.forEach((pos, idx) => {
+  const column = MeshBuilder.CreateCylinder(`templeColumn-${idx}`, { diameter: 0.8, height: 3 }, scene)
+  column.position = pos
+  const colMat = new StandardMaterial(`colMat-${idx}`, scene)
+  colMat.diffuseColor = new Color3(0.85, 0.8, 0.7)
+  column.material = colMat
+  column.parent = egyptianRoot
+})
+
+// Celestial alignment markers (sun and star stones) around pyramid
+const celestialMarkerPositions = [
+  new Vector3(0, 0.3, -4),     // North (sun)
+  new Vector3(4, 0.3, 0),       // East (star 1)
+  new Vector3(0, 0.3, 4),       // South (star 2)
+  new Vector3(-4, 0.3, 0),      // West (star 3)
+]
+
+celestialMarkerPositions.forEach((pos, idx) => {
+  const marker = MeshBuilder.CreateBox(`celestialMarker-${idx}`, { width: 1, height: 0.5, depth: 1 }, scene)
+  marker.position = pos
+  const markerMat = new StandardMaterial(`celestialMarkerMat-${idx}`, scene)
+  markerMat.diffuseColor = new Color3(0.8, 0.7, 0.2)
+  markerMat.emissiveColor = new Color3(0.2, 0.15, 0.05)
+  marker.material = markerMat
+  marker.parent = egyptianRoot
+  marker.metadata = { isCelestialMarker: true, index: idx }
+})
+
+// Egyptian priests
+createNpc('pharaoh', new Vector3(-1, 1.1, 1), new Color3(0.85, 0.7, 0.2), egyptianRoot)
+createNpc('priest1', new Vector3(1.5, 1.1, -1), new Color3(0.75, 0.6, 0.15), egyptianRoot)
+createNpc('priest2', new Vector3(-1.5, 1.1, -2), new Color3(0.7, 0.55, 0.1), egyptianRoot)
+
+// Artifact collectible positions
+const chalicePos = [
+  new Vector3(-3, 0.5, -5),
+  new Vector3(3, 0.5, -5),
+  new Vector3(0, 0.5, -7),
+]
+
+const scarabPos = [
+  new Vector3(-4, 0.5, 2),
+  new Vector3(4, 0.5, 2),
+  new Vector3(0, 0.5, 4),
+]
+
+const tabletPos = [
+  new Vector3(-2, 0.5, 5),
+  new Vector3(2, 0.5, 5),
+  new Vector3(0, 0.5, 6),
+]
+
+function createArtifact(position: Vector3, color: Color3, shape: string, targetArray: Mesh[]) {
+  const artifact = shape === 'chalice'
+    ? MeshBuilder.CreateCylinder(`${shape}`, { diameter: 0.5, height: 0.8 }, scene)
+    : MeshBuilder.CreateBox(`${shape}`, { width: 0.6, height: 0.3, depth: 0.6 }, scene)
+  
+  artifact.position = position
+  const mat = new StandardMaterial(`${shape}-mat`, scene)
+  mat.diffuseColor = color
+  mat.emissiveColor = color.scale(0.35)
+  artifact.material = mat
+  artifact.parent = egyptianRoot
+  targetArray.push(artifact)
+  return artifact
+}
+
+chalicePos.forEach(pos => createArtifact(pos, new Color3(1, 0.84, 0), 'chalice', chaliceMeshes))
+scarabPos.forEach(pos => createArtifact(pos, new Color3(0.6, 0.4, 0.1), 'scarab', scarabMeshes))
+tabletPos.forEach(pos => createArtifact(pos, new Color3(0.75, 0.7, 0.6), 'tablet', tabletMeshes))
+
 const yamPositions = [
   new Vector3(6, 0.6, 14),
   new Vector3(12, 0.6, -4),
@@ -1192,6 +1456,15 @@ function resetMaasaiCollectibles() {
   blueBeadPos.forEach(pos => createBead(pos, new Color3(0.2, 0.4, 0.8), beadBlueMeshes))
 }
 
+function resetEgyptianCollectibles() {
+  chaliceMeshes.splice(0).forEach((mesh) => mesh.dispose())
+  scarabMeshes.splice(0).forEach((mesh) => mesh.dispose())
+  tabletMeshes.splice(0).forEach((mesh) => mesh.dispose())
+  chalicePos.forEach(pos => createArtifact(pos, new Color3(1, 0.84, 0), 'chalice', chaliceMeshes))
+  scarabPos.forEach(pos => createArtifact(pos, new Color3(0.6, 0.4, 0.1), 'scarab', scarabMeshes))
+  tabletPos.forEach(pos => createArtifact(pos, new Color3(0.75, 0.7, 0.6), 'tablet', tabletMeshes))
+}
+
 function resetTribeMission(tribe: Tribe) {
   if (tribe === 'Igbo') {
     igboMission.yamsCollected = 0
@@ -1227,12 +1500,22 @@ function resetTribeMission(tribe: Tribe) {
     maasaiMission.ceremonyDone = false
     resetMaasaiCollectibles()
   }
+
+  if (tribe === 'Egyptian') {
+    egyptianMission.chalicesCollected = 0
+    egyptianMission.scarabsCollected = 0
+    egyptianMission.tabletsCollected = 0
+    egyptianMission.celestialDone = false
+    egyptianMission.alignmentSteps = 0
+    resetEgyptianCollectibles()
+  }
 }
 
 resetIgboCollectibles()
 resetYorubaCollectibles()
 resetHausaCollectibles()
 resetMaasaiCollectibles()
+resetEgyptianCollectibles()
 
 const festivalStage = MeshBuilder.CreateCylinder('festivalStage', { diameter: 10, height: 0.4 }, scene)
 festivalStage.position = new Vector3(2, 0.2, 6)
@@ -1264,6 +1547,7 @@ function setState(next: GameState) {
   sharedRoot.setEnabled(state === 'hub' || state === 'africa')
   nigeriaRoot.setEnabled(state === 'nigeria' || state === 'lga-select')
   kenyaRoot.setEnabled(state === 'kenya')
+  egyptRoot.setEnabled(state === 'egypt')
   lgaMarkersRoot.setEnabled(state === 'lga-select')
   villageRoot.setEnabled(state === 'village' || state === 'festival')
   festivalRoot.setEnabled(state === 'festival')
@@ -1274,6 +1558,7 @@ function setState(next: GameState) {
   yorubaRoot.setEnabled(state === 'village' || state === 'festival' ? activeTribe === 'Yoruba' : false)
   hausaRoot.setEnabled(state === 'village' || state === 'festival' ? activeTribe === 'Hausa' : false)
   maasaiRoot.setEnabled(state === 'village' || state === 'festival' ? activeTribe === 'Maasai' : false)
+  egyptianRoot.setEnabled(state === 'village' || state === 'festival' ? activeTribe === 'Egyptian' : false)
 
   if (state === 'hub') {
     scene.activeCamera = arcCamera
@@ -1340,6 +1625,23 @@ function setState(next: GameState) {
     setHint('The Maasai are renowned warriors and pastoralists of East Africa.')
     setAction('Back to Africa', () => setState('africa'))
     setTutorial('Click the Maasai marker to enter their ceremonial village.')
+    setRecapVisible(false)
+  }
+
+  if (state === 'egypt') {
+    scene.activeCamera = arcCamera
+    arcCamera.attachControl(canvas, true)
+    walkCamera.detachControl()
+    uiCrosshair.classList.add('hidden')
+    uiChoices.classList.add('hidden')
+    arcCamera.beta = Math.PI / 3.2
+    desiredTarget = new Vector3(0, 0, 0)
+    desiredRadius = 12
+    setTitle('Egypt', 'Discover the wisdom of the Pharaohs.')
+    setObjective('Click the Pharaoh marker to begin artifact gathering and celestial alignment.')
+    setHint('Ancient Egypt was home to monumental temples and sacred mysteries.')
+    setAction('Back to Africa', () => setState('africa'))
+    setTutorial('Click the Pharaoh marker to enter the temple and begin your journey.')
     setRecapVisible(false)
   }
 
@@ -1423,12 +1725,14 @@ function updateMissionUI() {
       }
 
       if (arochukwuMission.stonesFound > 0) {
+        updateArochukwuHighlight()
         const progress = `Symbols found ${arochukwuMission.stonesFound}/${arochukwuMission.stonesNeeded}`
         setObjective('Complete the ancient stone puzzle.', progress)
         return
       }
 
-      setObjective('Seek the wisdom of Arochukwu.', 'Find the sacred stones and unlock their secrets.')
+      updateArochukwuHighlight()
+      setObjective('Seek the wisdom of Arochukwu.', 'Look for the labels above the stones and tap: Oracle → Pilgrimage → Unity.')
       return
     }
 
@@ -1491,6 +1795,22 @@ function updateMissionUI() {
     }
 
     setObjective('The ceremony is complete!', 'The warrior initiation has been honored.')
+  }
+
+  if (activeTribe === 'Egyptian') {
+    const artifactProgress = `Chalices ${egyptianMission.chalicesCollected}/3 · Scarabs ${egyptianMission.scarabsCollected}/3 · Tablets ${egyptianMission.tabletsCollected}/3`
+    
+    if (egyptianMission.chalicesCollected < 3 || egyptianMission.scarabsCollected < 3 || egyptianMission.tabletsCollected < 3) {
+      setObjective('Gather ancient artifacts: golden chalices, sacred scarabs, and wisdom tablets.', artifactProgress)
+      return
+    }
+
+    if (!egyptianMission.celestialDone) {
+      setObjective('The treasures are collected!', 'Align the celestial stones to unlock the pyramid\'s secrets.')
+      return
+    }
+
+    setObjective('The pyramid\'s mysteries are revealed!', 'The wisdom of the ancient pharaohs is yours.')
   }
 }
 
@@ -1567,13 +1887,14 @@ scene.onPointerObservable.add((pointerInfo) => {
 
       if (activeLGA === 'Arochukwu') {
         // Arochukwu: Story stones
-        if (arochukwuStones.includes(pickedMesh) && arochukwuMission.stonesFound > 0) {
+        if (arochukwuStones.includes(pickedMesh) && !arochukwuMission.stonePuzzleDone) {
           const symbol = metadata?.symbol
-          const expected = arochukwuSymbols[arochukwuMission.stonesFound - 1]
-          if (symbol === expected) {
+          const expected = arochukwuSymbols[arochukwuMission.stonesFound]
+          if (symbol && symbol === expected) {
             arochukwuMission.stonesFound += 1
             showToast(`Story symbol: ${symbol}`)
             playTone(620, 0.12, 'sine', 0.05)
+            updateArochukwuHighlight()
             
             if (arochukwuMission.stonesFound === 2) {
               showCulturalPopup(
@@ -1583,7 +1904,7 @@ scene.onPointerObservable.add((pointerInfo) => {
               )
             }
             
-            if (arochukwuMission.stonesFound > arochukwuSymbols.length) {
+            if (arochukwuMission.stonesFound >= arochukwuSymbols.length) {
               arochukwuMission.stonePuzzleDone = true
               setHint('Arochukwu stories speak of sacred pilgrimages and unity beyond borders.')
               showCulturalPopup(
@@ -1595,9 +1916,12 @@ scene.onPointerObservable.add((pointerInfo) => {
               updateMissionUI()
             }
           } else {
-            arochukwuMission.stonesFound = 1
-            showToast('The sequence resets. Try again.')
+            arochukwuMission.stonesFound = 0
+            setHint('Tap the stones: Oracle → Pilgrimage → Unity.')
+            showToast('The sequence resets. Start with Oracle.')
             playTone(220, 0.12, 'sine', 0.04)
+            updateArochukwuHighlight()
+            updateMissionUI()
           }
         }
       }
@@ -1704,6 +2028,56 @@ scene.onPointerObservable.add((pointerInfo) => {
         playTone(560, 0.12, 'triangle', 0.05)
       }
     }
+
+    if (activeTribe === 'Egyptian') {
+      if (chaliceMeshes.includes(pickedMesh)) {
+        pickedMesh.dispose()
+        egyptianMission.chalicesCollected += 1
+        updateMissionUI()
+        showToast('Golden chalice found!')
+        playTone(880, 0.15, 'sine', 0.06)
+        
+        if (egyptianMission.chalicesCollected === 1) {
+          showCulturalPopup(
+            'Sacred Vessels',
+            'Ancient Egypt',
+            'Golden chalices were used in sacred rituals and ceremonies honoring the gods. Pharaohs believed these vessels held divine power and used them to offer libations (drink offerings) to the deities. The craftsmanship of Egyptian goldsmiths was legendary throughout the ancient world.'
+          )
+        }
+      }
+
+      if (scarabMeshes.includes(pickedMesh)) {
+        pickedMesh.dispose()
+        egyptianMission.scarabsCollected += 1
+        updateMissionUI()
+        showToast('Sacred scarab revealed')
+        playTone(660, 0.15, 'sine', 0.06)
+        
+        if (egyptianMission.scarabsCollected === 1) {
+          showCulturalPopup(
+            'Scarab of Transformation',
+            'Ancient Egypt',
+            'The scarab beetle symbolized rebirth and transformation in Egyptian mythology. Egyptians carved scarabs from stone and semi-precious gems, wearing them as amulets for protection. The scarab\'s journey rolling the sun across the sky represented the eternal cycle of regeneration and divine power.'
+          )
+        }
+      }
+
+      if (tabletMeshes.includes(pickedMesh)) {
+        pickedMesh.dispose()
+        egyptianMission.tabletsCollected += 1
+        updateMissionUI()
+        showToast('Ancient tablet discovered')
+        playTone(740, 0.15, 'sine', 0.06)
+        
+        if (egyptianMission.tabletsCollected === 1) {
+          showCulturalPopup(
+            'Wisdom of the Pyramids',
+            'Ancient Egypt',
+            'Stone tablets recorded the names, titles, and deeds of pharaohs and the spells meant to protect them in the afterlife. These inscriptions, carved with meticulous precision, preserved the knowledge and spiritual understanding of ancient Egypt for eternity. Each symbol carried layers of meaning rooted in divine law and cosmic harmony.'
+          )
+        }
+      }
+    }
   }
 })
 
@@ -1754,8 +2128,9 @@ function updateInteractions() {
       if (!arochukwuMission.stonePuzzleDone && distanceToCircle < 5) {
         if (arochukwuMission.stonesFound === 0) {
           setAction('Begin the puzzle', () => {
-            arochukwuMission.stonesFound = 1
             setHint('Tap the stones: Oracle → Pilgrimage → Unity.')
+            showToast('Start with the Oracle stone.')
+            updateArochukwuHighlight()
           })
         } else {
           setAction(null, null)
@@ -1857,7 +2232,51 @@ function updateInteractions() {
     }
   }
 
+  if (activeTribe === 'Egyptian') {
+    const distanceToPyramid = Vector3.Distance(playerPos, new Vector3(0, 2, 0))
+    if (egyptianMission.chalicesCollected >= 3 && egyptianMission.scarabsCollected >= 3 && egyptianMission.tabletsCollected >= 3 && !egyptianMission.celestialDone) {
+      if (distanceToPyramid < 8) {
+        setAction('Align the stars', () => {
+          egyptianMission.alignmentSteps = 0
+          updateCelestialAlignment()
+        })
+        return
+      }
+    }
+  }
+
   setAction(null, null)
+}
+
+function updateWalkMovement() {
+  if (state !== 'village' && state !== 'festival') return
+  if (scene.activeCamera !== walkCamera || photoModeActive) return
+
+  const deltaSeconds = scene.getEngine().getDeltaTime() / 1000
+  const inputX = (walkInput.right ? 1 : 0) - (walkInput.left ? 1 : 0)
+  const inputZ = (walkInput.forward ? 1 : 0) - (walkInput.back ? 1 : 0)
+  const inputLength = Math.hypot(inputX, inputZ)
+
+  if (inputLength > 0) {
+    const forward = walkCamera.getDirection(new Vector3(0, 0, 1))
+    const right = walkCamera.getDirection(new Vector3(1, 0, 0))
+    forward.y = 0
+    right.y = 0
+    forward.normalize()
+    right.normalize()
+
+    const moveDirection = right.scale(inputX).addInPlace(forward.scale(inputZ)).normalize()
+    const speed = walkConfig.maxSpeed * (walkInput.sprint ? walkConfig.sprintMultiplier : 1)
+    const desiredVelocity = moveDirection.scale(speed)
+    const lerpAmount = 1 - Math.exp(-walkConfig.accel * deltaSeconds)
+    walkVelocity.copyFrom(Vector3.Lerp(walkVelocity, desiredVelocity, lerpAmount))
+  } else {
+    const lerpAmount = 1 - Math.exp(-walkConfig.damping * deltaSeconds)
+    walkVelocity.copyFrom(Vector3.Lerp(walkVelocity, Vector3.Zero(), lerpAmount))
+  }
+
+  walkCamera.position.addInPlace(walkVelocity.scale(deltaSeconds))
+  walkCamera.position.y = walkConfig.eyeHeight
 }
 
 function updateCookingStep() {
@@ -1927,8 +2346,36 @@ function updateMaasaiDance() {
   }
 }
 
+function updateCelestialAlignment() {
+  const alignmentSteps = ['Align North (Sun)', 'Align East (Star)', 'Align South (Star)']
+  const currentStep = egyptianMission.alignmentSteps
+  
+  if (currentStep < 3) {
+    setObjective(`Celestial Alignment: ${alignmentSteps[currentStep]}`, 'Press the action button to invoke cosmic harmony.')
+    let performedAlignment = false
+    setAction('Align', () => {
+      if (!performedAlignment) {
+        performedAlignment = true
+        egyptianMission.alignmentSteps += 1
+        showToast(`${alignmentSteps[currentStep]} aligned!`)
+        playTone(528 + currentStep * 111, 0.15, 'sine', 0.08)
+        
+        if (egyptianMission.alignmentSteps < 3) {
+          setTimeout(() => updateCelestialAlignment(), 500)
+        } else {
+          egyptianMission.celestialDone = true
+          showToast('The pyramid is unlocked!')
+          playTone(963, 0.3, 'sine', 0.1)
+          setState('festival')
+        }
+      }
+    })
+  }
+}
+
 scene.onBeforeRenderObservable.add(() => {
   globe.rotation.y += 0.0006
+  updateWalkMovement()
   if (state === 'village') {
     updateInteractions()
   }
