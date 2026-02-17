@@ -49,6 +49,10 @@ A Babylon.js 3D cultural exploration game featuring multiple African regions and
 - **Visual Feedback**: Emissive highlighting, floating labels, and toast notifications
 - **Audio System**: Ambient soundscapes and interaction feedback tones
 - **Multi-Region Support**: Expandable architecture for adding new cultures
+- **Save/Load System**: Automatic progress saving with localStorage (auto-save every 30s)
+- **Achievement System**: 20 unlockable achievements across explorer, mission, collectible, and special categories
+- **Achievements Gallery**: Trophy button with detailed view of all achievements and progress tracking
+- **Modular Architecture**: Split into reusable modules (types, saveSystem, achievementSystem, audioSystem, uiManager, missionManager)
 
 ## Technical Architecture
 - **Engine**: Babylon.js (WebGL 3D rendering)
@@ -56,8 +60,10 @@ A Babylon.js 3D cultural exploration game featuring multiple African regions and
   - ArcRotateCamera (hub/map navigation)
   - UniversalCamera (first-person village exploration)
 - **State Machine**: 7 game states (hub, africa, nigeria, kenya, egypt, lga-select, village, festival)
-- **Mission Framework**: Object-based tracking with completion flags and counts
+- **Mission Framework**: Centralized MissionManager with progress tracking
 - **Collectible System**: 13+ collectible types with spatial positioning and interaction zones
+- **Save System**: localStorage with versioning and auto-save
+- **Achievement System**: Event-driven unlocks with notification UI
 
 ## Run Locally
 ```bash
@@ -67,17 +73,24 @@ npm run build      # Production build
 ```
 
 ## Development Status
-**Phase 5 Completed (Current)**
-- ✅ Egypt region with pyramid temple
-- ✅ Kenya/Maasai expansion  
-- ✅ Movement system overhaul
-- ✅ Arochukwu puzzle refinements
+**Phase 16-17 Completed (Current)**
+- ✅ Modular code architecture (8 TypeScript modules)
+- ✅ Save/Load system with auto-save
+- ✅ Achievement system with 20 achievements
+- ✅ Achievements gallery UI
+- ✅ Progress statistics tracking
+
+**Previous Phases**
+- ✅ Phase 5: Egypt region, Movement overhaul, Arochukwu puzzle
+- ✅ Phase 4: Kenya/Maasai expansion
+- ✅ Phase 1-3: Nigeria foundation (Igbo, Yoruba, Hausa)
 
 **Roadmap**
 - Phase 6: Additional African nations (Morocco, South Africa, Ethiopia)
 - Phase 7: Asian continent (India, China, Japan)
-- Phase 8: Save system and achievement tracking
-- Phase 9: Multiplayer cultural exchange hub
+- Phase 18: Social features and educational enhancements
+- Phase 19: Technical optimizations and mobile support
+- Phase 20+: Global expansion (Europe, Middle East, Oceania, Americas)
 
 ## Project Structure
 ```
