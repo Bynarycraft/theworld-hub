@@ -51,6 +51,17 @@
         <button id="uiCulturalClose" class="cultural-popup-close" type="button">Learn More</button>
       </div>
       <div id="uiCrosshair" class="crosshair hidden"></div>
+      
+      <!-- Achievements Gallery -->
+      <button id="btnAchievements" class="btn-gallery" type="button" title="View Achievements">🏆</button>
+      <div id="uiAchievements" class="achievements-gallery hidden">
+        <div class="gallery-header">
+          <h2>Achievements</h2>
+          <div id="achievementProgress" class="achievement-progress">0 / 20 Unlocked (0%)</div>
+          <button id="btnCloseAchievements" class="btn-close" type="button">✕</button>
+        </div>
+        <div id="achievementsList" class="achievements-list"></div>
+      </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

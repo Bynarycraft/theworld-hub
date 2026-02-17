@@ -14,6 +14,12 @@ import {
   UniversalCamera,
   Vector3,
 } from '@babylonjs/core'
+import { uiManager } from './uiManager'
+import { audioSystem } from './audioSystem'
+import { saveSystem } from './saveSystem'
+import { achievementSystem } from './achievementSystem'
+import { missionManager } from './missionManager'
+import type { GameState, Tribe, IgboLGA } from './types'
 
 const canvas = document.querySelector<HTMLCanvasElement>('#renderCanvas')
 if (!canvas) {
@@ -23,139 +29,92 @@ if (!canvas) {
 const engine = new Engine(canvas, true, { antialias: true })
 const scene = new Scene(engine)
 
-function requireElement<T extends HTMLElement>(selector: string) {
-  const element = document.querySelector<T>(selector)
-  if (!element) {
-    throw new Error(`Missing element: ${selector}`)
-  }
-  return element
+// Initialize UI close handlers
+uiManager.setupCloseHandlers(
+  () => uiManager.hideTutorial(),
+  () => uiManager.hideRecap(),
+  () => uiManager.hideCulturalPopup()
+)
+
+// Setup achievement notifications
+achievementSystem.onUnlock((achievement) => {
+  uiManager.showAchievement(achievement.title, achievement.description, achievement.icon)
+  audioSystem.playTone(800, 0.3)
+  setTimeout(() => audioSystem.playTone(1000, 0.3), 150)
+  
+  // Update gallery if open
+  const progress = achievementSystem.getProgress()
+  uiManager.updateAchievementsGallery(achievementSystem.getAll(), progress)
+})
+
+// Setup achievements gallery
+uiManager.setupAchievementsGallery(() => {
+  const progress = achievementSystem.getProgress()
+  uiManager.updateAchievementsGallery(achievementSystem.getAll(), progress)
+  audioSystem.playTone(600, 0.1)
+})
+
+// Load saved game if available
+const savedGame = saveSystem.load()
+let state: GameState = savedGame?.state || 'hub'
+let selectedTribe: Tribe | null = savedGame?.selectedTribe || null
+let selectedLGA: IgboLGA | null = savedGame?.selectedLGA || null
+
+if (savedGame) {
+  missionManager.loadFromSave(savedGame.missions)
+  achievementSystem.loadUnlocked(savedGame.achievements)
+  console.log('Game loaded from save')
 }
 
-const uiTitle = requireElement<HTMLDivElement>('#uiTitle')
-const uiSubtitle = requireElement<HTMLDivElement>('#uiSubtitle')
-const uiObjective = requireElement<HTMLDivElement>('#uiObjective')
-const uiProgress = requireElement<HTMLDivElement>('#uiProgress')
-const uiHint = requireElement<HTMLDivElement>('#uiHint')
-const uiAction = requireElement<HTMLButtonElement>('#uiAction')
-const uiToast = requireElement<HTMLDivElement>('#uiToast')
-const uiChoices = requireElement<HTMLDivElement>('#uiChoices')
-const uiCrosshair = requireElement<HTMLDivElement>('#uiCrosshair')
-const uiTutorial = requireElement<HTMLDivElement>('#uiTutorial')
-const uiTutorialBody = requireElement<HTMLDivElement>('#uiTutorialBody')
-const uiTutorialClose = requireElement<HTMLButtonElement>('#uiTutorialClose')
-const uiRecap = requireElement<HTMLDivElement>('#uiRecap')
-const uiRecapTitle = requireElement<HTMLDivElement>('#uiRecapTitle')
-const uiRecapBody = requireElement<HTMLDivElement>('#uiRecapBody')
-const uiRecapClose = requireElement<HTMLButtonElement>('#uiRecapClose')
-const uiCulturalPopup = requireElement<HTMLDivElement>('#uiCulturalPopup')
-const uiCulturalTitle = requireElement<HTMLDivElement>('#uiCulturalTitle')
-const uiCulturalSubtitle = requireElement<HTMLDivElement>('#uiCulturalSubtitle')
-const uiCulturalBody = requireElement<HTMLDivElement>('#uiCulturalBody')
-const uiCulturalClose = requireElement<HTMLButtonElement>('#uiCulturalClose')
+// Setup auto-save every 30 seconds
+saveSystem.autoSave(() => ({
+  state,
+  selectedTribe,
+  selectedLGA,
+  missions: missionManager.exportForSave(),
+  achievements: achievementSystem.getUnlockedIds(),
+  collectiblesFound: missionManager.getTotalCollectibles(),
+  missionsCompleted: missionManager.getTotalMissionsCompleted(),
+}))
 
-let audioContext: AudioContext | null = null
-let ambientOscillator: OscillatorNode | null = null
-let ambientGain: GainNode | null = null
-let audioEnabled = false
 let photoModeActive = false
 let photoModeCamera: UniversalCamera | null = null
-
-type GameState = 'hub' | 'africa' | 'nigeria' | 'kenya' | 'egypt' | 'lga-select' | 'village' | 'festival'
-type Tribe = 'Igbo' | 'Yoruba' | 'Hausa' | 'Maasai' | 'Egyptian'
-type IgboLGA = 'Owerri' | 'Arochukwu' | 'Onitsha'
-
-let state: GameState = 'hub'
-let selectedTribe: Tribe | null = null
-let selectedLGA: IgboLGA | null = null
 let currentAction: (() => void) | null = null
 let desiredTarget = new Vector3(0, 0, 0)
 let desiredRadius = 16
 
-const igboMission = {
-  // Owerri: New Yam Festival
-  yamsCollected: 0,
-  kolaCollected: 0,
-  yamsNeeded: 5,
-  kolaNeeded: 3,
-  cookingStage: 0,
-  cookingDone: false,
-  delivered: false,
-  // Arochukwu: Story Stones
-  storyStage: 0,
-  storyDone: false,
-  // Onitsha: River Trade
-  fabricWoven: 0,
-  fabricNeeded: 2,
-}
-
-const arochukwuMission = {
-  stonesFound: 0,
-  stonesNeeded: 3,
-  stonePuzzleDone: false,
-  storyUnlocked: false,
-}
-
-const yorubaMission = {
-  sticksCollected: 0,
-  sticksNeeded: 2,
-  rhythmHits: 0,
-  rhythmNeeded: 5,
-  rhythmActive: false,
-  rhythmDone: false,
-}
-
-const hausaMission = {
-  fabricCollected: 0,
-  fabricNeeded: 3,
-  flagsCollected: 0,
-  flagsNeeded: 3,
-  arranged: false,
-}
-
-const maasaiMission = {
-  beadsRed: 0,
-  beadsGreen: 0,
-  beadsBlue: 0,
-  beadsNeeded: 3,
-  ceremonyDone: false,
-  danceSteps: 0,
-  danceNeeded: 4,
-}
-
-const egyptianMission = {
-  chalicesCollected: 0,
-  scarabsCollected: 0,
-  tabletsCollected: 0,
-  artifactsNeeded: 3,
-  celestialDone: false,
-  alignmentSteps: 0,
-  alignmentNeeded: 3,
-}
+// Mission state is now managed by missionManager
+const igboMission = missionManager.igbo
+const arochukwuMission = missionManager.arochukwu
+const yorubaMission = missionManager.yoruba
+const hausaMission = missionManager.hausa
+const maasaiMission = missionManager.maasai
+const egyptianMission = missionManager.egyptian
 
 function setAction(label: string | null, handler: (() => void) | null) {
   if (label && handler) {
-    uiAction.textContent = label
-    uiAction.classList.remove('hidden')
+    uiManager.get('uiAction').textContent = label
+    uiManager.get('uiAction').classList.remove('hidden')
     currentAction = handler
   } else {
-    uiAction.classList.add('hidden')
-    uiAction.textContent = ''
+    uiManager.get('uiAction').classList.add('hidden')
+    uiManager.get('uiAction').textContent = ''
     currentAction = null
   }
 }
 
 function setHint(text: string) {
-  uiHint.textContent = text
+  uiManager.setHint(text)
 }
 
 function setObjective(text: string, progress = '') {
-  uiObjective.textContent = text
-  uiProgress.textContent = progress
+  uiManager.setObjective(text)
+  uiManager.setProgress(progress)
 }
 
 function setTitle(title: string, subtitle: string) {
-  uiTitle.textContent = title
-  uiSubtitle.textContent = subtitle
+  uiManager.setTitle(title)
+  uiManager.setSubtitle(subtitle)
 }
 
 function getActiveTribe() {
@@ -163,63 +122,29 @@ function getActiveTribe() {
 }
 
 function showToast(text: string) {
-  uiToast.textContent = text
-  uiToast.classList.remove('hidden')
-  window.setTimeout(() => uiToast.classList.add('hidden'), 2200)
+  uiManager.showToast(text, 2200)
 }
 
 function enableAudio() {
-  if (!audioContext) {
-    audioContext = new AudioContext()
-  }
-  if (audioContext.state === 'suspended') {
-    audioContext.resume()
-  }
-  audioEnabled = true
+  audioSystem.enable()
   updateAmbientForState()
 }
 
 function playTone(frequency: number, duration = 0.12, type: OscillatorType = 'sine', volume = 0.05) {
-  if (!audioContext || !audioEnabled) return
-  const osc = audioContext.createOscillator()
-  const gain = audioContext.createGain()
-  osc.type = type
-  osc.frequency.value = frequency
-  gain.gain.value = volume
-  osc.connect(gain)
-  gain.connect(audioContext.destination)
-  osc.start()
-  gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + duration)
-  osc.stop(audioContext.currentTime + duration)
+  audioSystem.playTone(frequency, duration)
 }
 
 function stopAmbient() {
-  if (ambientOscillator) {
-    ambientOscillator.stop()
-    ambientOscillator.disconnect()
-    ambientOscillator = null
-  }
-  if (ambientGain) {
-    ambientGain.disconnect()
-    ambientGain = null
-  }
+  audioSystem.stopAmbient()
 }
 
 function startAmbient(frequency: number, type: OscillatorType, volume: number) {
-  if (!audioContext || !audioEnabled) return
-  stopAmbient()
-  ambientOscillator = audioContext.createOscillator()
-  ambientGain = audioContext.createGain()
-  ambientOscillator.type = type
-  ambientOscillator.frequency.value = frequency
-  ambientGain.gain.value = volume
-  ambientOscillator.connect(ambientGain)
-  ambientGain.connect(audioContext.destination)
-  ambientOscillator.start()
+  if (!audioSystem.isEnabled()) return
+  audioSystem.setAmbientTone(frequency)
 }
 
 function updateAmbientForState() {
-  if (!audioEnabled) return
+  if (!audioSystem.isEnabled()) return
   if (state === 'hub') {
     startAmbient(110, 'sine', 0.02)
   } else if (state === 'africa' || state === 'nigeria') {
@@ -232,38 +157,41 @@ function updateAmbientForState() {
 }
 
 function setTutorial(text: string) {
-  uiTutorialBody.textContent = text
+  uiManager.get('uiTutorialBody').textContent = text
 }
 
 function setRecapVisible(visible: boolean) {
   if (visible) {
-    uiRecap.classList.remove('hidden')
+    uiManager.get('uiRecap').classList.remove('hidden')
   } else {
-    uiRecap.classList.add('hidden')
+    uiManager.get('uiRecap').classList.add('hidden')
   }
 }
 
 function showRecap(tribe: Tribe) {
-  uiRecapTitle.textContent = `${tribe} Festival Recap`
+  let body = ''
   if (tribe === 'Igbo') {
-    uiRecapBody.textContent = 'You gathered yams and kola nuts, prepared the feast, and honored the elders. The New Yam Festival celebrates harvest and gratitude.'
+    body = 'You gathered yams and kola nuts, prepared the feast, and honored the elders. The New Yam Festival celebrates harvest and gratitude.'
   } else if (tribe === 'Yoruba') {
-    uiRecapBody.textContent = 'You collected drum sticks and completed the talking drum rhythm. The beats carry stories and connect the community.'
-  } else {
-    uiRecapBody.textContent = 'You prepared fabric and flags, then arranged the Durbar parade. The procession honors heritage, leadership, and unity.'
+    body = 'You collected drum sticks and completed the talking drum rhythm. The beats carry stories and connect the community.'
+  } else if (tribe === 'Hausa') {
+    body = 'You collected fabric and flags, then arranged the Durbar parade. This celebration showcases culture, equestrian skills, and community pride.'
+  } else if (tribe === 'Maasai') {
+    body = 'You traded beads and participated in the warrior dance. The ceremony honors tradition and strengthens bonds.'
+  } else if (tribe === 'Egyptian') {
+    body = 'You collected ancient artifacts and aligned the celestial temple. The wisdom of the pharaohs guides your journey.'
   }
+  
+  uiManager.showRecap(`${tribe} Festival Recap`, body)
   setRecapVisible(true)
 }
 
 function showCulturalPopup(title: string, subtitle: string, body: string) {
-  uiCulturalTitle.textContent = title
-  uiCulturalSubtitle.textContent = subtitle
-  uiCulturalBody.textContent = body
-  uiCulturalPopup.classList.remove('hidden')
+  uiManager.showCulturalPopup(title, subtitle, body)
 }
 
 function hideCulturalPopup() {
-  uiCulturalPopup.classList.add('hidden')
+  uiManager.hideCulturalPopup()
 }
 
 function togglePhotoMode() {
@@ -282,7 +210,8 @@ function togglePhotoMode() {
     scene.activeCamera = photoModeCamera
     photoModeCamera.attachControl(canvas, true)
     walkCamera.detachControl()
-    uiAction.classList.add('hidden')
+    uiManager.hideActionButton()
+    uiManager.hideCrosshair()
     uiObjective.classList.add('hidden')
     uiHint.classList.add('hidden')
     setTitle('Photo Mode', 'Press P again to exit. WASD to move freely.')
@@ -1667,6 +1596,21 @@ function setState(next: GameState) {
     walkCamera.attachControl(canvas, true)
     uiCrosshair.classList.remove('hidden')
     uiChoices.classList.add('hidden')
+    
+    // Track first village visit
+    if (!achievementSystem.isUnlocked('first-steps')) {
+      achievementSystem.unlock('first-steps')
+    }
+    
+    // Track region visits
+    if (selectedTribe === 'Maasai') {
+      saveSystem.visitRegion('kenya')
+    } else if (selectedTribe === 'Egyptian') {
+      saveSystem.visitRegion('egypt')
+    } else {
+      saveSystem.visitRegion('nigeria')
+    }
+    
     setTitle(`Nigeria - ${activeTribe}`, 'Festival of Unity: cultural preparation.')
     setHint('WASD to move. Click to look around, press E to interact.')
     updateMissionUI()
@@ -1679,6 +1623,10 @@ function setState(next: GameState) {
     walkCamera.attachControl(canvas, true)
     uiCrosshair.classList.remove('hidden')
     uiChoices.classList.add('hidden')
+    
+    // Track festival achievement
+    achievementSystem.unlock('unity-champion')
+    
     setTitle(`Festival of Unity - ${activeTribe}`, 'Celebration begins as the sun sets.')
     setObjective('Enjoy the festival and explore the village.')
     setHint('Nigeria is home to hundreds of cultures. This is only the beginning.')
@@ -1845,6 +1793,7 @@ scene.onPointerObservable.add((pointerInfo) => {
         if (yamMeshes.includes(pickedMesh)) {
           pickedMesh.dispose()
           igboMission.yamsCollected += 1
+          achievementSystem.checkCollectibleCount(missionManager.getTotalCollectibles())
           updateMissionUI()
           showToast('Yam collected')
           playTone(520, 0.12, 'triangle', 0.05)
@@ -1866,6 +1815,7 @@ scene.onPointerObservable.add((pointerInfo) => {
         if (kolaMeshes.includes(pickedMesh)) {
           pickedMesh.dispose()
           igboMission.kolaCollected += 1
+          achievementSystem.checkCollectibleCount(missionManager.getTotalCollectibles())
           updateMissionUI()
           showToast('Kola nut collected')
           playTone(560, 0.12, 'triangle', 0.05)
@@ -1906,6 +1856,8 @@ scene.onPointerObservable.add((pointerInfo) => {
             
             if (arochukwuMission.stonesFound >= arochukwuSymbols.length) {
               arochukwuMission.stonePuzzleDone = true
+              achievementSystem.unlock('oracle-wisdom')
+              achievementSystem.checkMissionComplete('arochukwu-puzzle')
               setHint('Arochukwu stories speak of sacred pilgrimages and unity beyond borders.')
               showCulturalPopup(
                 'Arochukwu Unity',
@@ -2112,6 +2064,12 @@ function updateInteractions() {
       if (igboMission.cookingDone && !igboMission.delivered && distanceToElder < 4) {
         setAction('Deliver dishes', () => {
           igboMission.delivered = true
+          achievementSystem.unlock('harvest-master')
+          achievementSystem.checkMissionComplete('igbo-harvest')
+          if (missionManager.isRegionComplete('nigeria')) {
+            achievementSystem.checkRegionComplete('nigeria')
+          }
+          showToast('Feast delivered to the elders!')
           setState('festival')
         })
         return
@@ -2194,6 +2152,11 @@ function updateInteractions() {
           if (yorubaMission.rhythmHits >= yorubaMission.rhythmNeeded) {
             yorubaMission.rhythmActive = false
             yorubaMission.rhythmDone = true
+            achievementSystem.unlock('drum-virtuoso')
+            achievementSystem.checkMissionComplete('yoruba-drum')
+            if (missionManager.isRegionComplete('nigeria')) {
+              achievementSystem.checkRegionComplete('nigeria')
+            }
             showToast('Rhythm complete')
             playTone(880, 0.2, 'sine', 0.06)
             setState('festival')
@@ -2210,6 +2173,11 @@ function updateInteractions() {
       if (distanceToParade < 5) {
         setAction('Arrange flags', () => {
           hausaMission.arranged = true
+          achievementSystem.unlock('parade-organizer')
+          achievementSystem.checkMissionComplete('hausa-parade')
+          if (missionManager.isRegionComplete('nigeria')) {
+            achievementSystem.checkRegionComplete('nigeria')
+          }
           showToast('Parade is ready')
           playTone(760, 0.18, 'sine', 0.06)
           setState('festival')
@@ -2337,6 +2305,9 @@ function updateMaasaiDance() {
           setTimeout(() => updateMaasaiDance(), 400)
         } else {
           maasaiMission.ceremonyDone = true
+          achievementSystem.unlock('warrior-dance')
+          achievementSystem.checkMissionComplete('maasai-dance')
+          achievementSystem.checkRegionComplete('kenya')
           showToast('Warrior ceremony complete!')
           playTone(880, 0.25, 'sine', 0.08)
           setState('festival')
@@ -2364,6 +2335,9 @@ function updateCelestialAlignment() {
           setTimeout(() => updateCelestialAlignment(), 500)
         } else {
           egyptianMission.celestialDone = true
+          achievementSystem.unlock('celestial-alignment')
+          achievementSystem.checkMissionComplete('egypt-celestial')
+          achievementSystem.checkRegionComplete('egypt')
           showToast('The pyramid is unlocked!')
           playTone(963, 0.3, 'sine', 0.1)
           setState('festival')
