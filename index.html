@@ -28,10 +28,11 @@
       <div id="uiToast" class="toast hidden"></div>
       <div class="legend" id="uiLegend">
         <div class="legend-title">World Museum</div>
-        <div class="legend-item"><span class="dot africa"></span>Africa (Demo)</div>
+        <div class="legend-item"><span class="dot africa"></span>Africa</div>
         <div class="legend-item"><span class="dot locked"></span>Europe</div>
         <div class="legend-item"><span class="dot locked"></span>Asia</div>
-        <div class="legend-item"><span class="dot locked"></span>Americas</div>
+        <div class="legend-item"><span class="dot locked"></span>North America</div>
+        <div class="legend-item"><span class="dot locked"></span>South America</div>
         <div class="legend-item"><span class="dot locked"></span>Oceania</div>
       </div>
       <div id="uiTutorial" class="tutorial">
@@ -51,6 +52,46 @@
         <button id="uiCulturalClose" class="cultural-popup-close" type="button">Learn More</button>
       </div>
       <div id="uiCrosshair" class="crosshair hidden"></div>
+      <div id="uiSubtitles" class="subtitle-overlay hidden" aria-live="polite"></div>
+
+      <div id="uiPhotoTools" class="photo-tools hidden">
+        <div class="photo-tools-title">Photo Tools</div>
+        <div class="photo-tools-row">
+          <button id="btnScreenshot" class="photo-btn" type="button">Save Screenshot</button>
+          <button class="photo-btn" data-filter="none" type="button">Normal</button>
+          <button class="photo-btn" data-filter="sepia" type="button">Sepia</button>
+          <button class="photo-btn" data-filter="cool" type="button">Cool</button>
+          <button class="photo-btn" data-filter="vignette" type="button">Vignette</button>
+          <button class="photo-btn" data-filter="film" type="button">Film</button>
+          <button class="photo-btn" data-filter="mono" type="button">Mono</button>
+        </div>
+      </div>
+      <div id="uiPhotoEffects" class="photo-effects"></div>
+
+      <!-- Community Guestbook -->
+      <button id="btnGuestbook" class="btn-gallery btn-guestbook" type="button" title="Community Guestbook">📝</button>
+      <div id="uiGuestbook" class="guestbook-panel hidden">
+        <div class="gallery-header">
+          <h2>Guestbook</h2>
+          <button id="btnCloseGuestbook" class="btn-close" type="button">✕</button>
+        </div>
+        <form id="guestbookForm" class="guestbook-form">
+          <input id="guestName" class="guestbook-input" type="text" maxlength="20" placeholder="Your name" />
+          <textarea id="guestMessage" class="guestbook-input" maxlength="120" placeholder="Leave a message"></textarea>
+          <button id="btnSubmitGuest" class="photo-btn" type="submit">Sign</button>
+        </form>
+        <div id="guestbookList" class="guestbook-list"></div>
+      </div>
+
+      <!-- Shareable Achievement Badges -->
+      <button id="btnBadges" class="btn-gallery btn-badges" type="button" title="Share Achievement Badges">🎖️</button>
+      <div id="uiBadges" class="badges-panel hidden">
+        <div class="gallery-header">
+          <h2>Achievement Badges</h2>
+          <button id="btnCloseBadges" class="btn-close" type="button">✕</button>
+        </div>
+        <div id="badgesList" class="badges-list"></div>
+      </div>
       
       <!-- Achievements Gallery -->
       <button id="btnAchievements" class="btn-gallery" type="button" title="View Achievements">🏆</button>
@@ -62,6 +103,85 @@
         </div>
         <div id="achievementsList" class="achievements-list"></div>
       </div>
+
+        <!-- Fact Cards Gallery -->
+        <button id="btnFactCards" class="btn-gallery btn-facts" type="button" title="View Cultural Fact Cards">📚</button>
+        <div id="uiFactCards" class="facts-gallery hidden">
+          <div class="gallery-header">
+            <h2>Fact Cards</h2>
+            <div id="factCardProgress" class="achievement-progress">0 / 11 Collected (0%)</div>
+            <button id="btnCloseFactCards" class="btn-close" type="button">✕</button>
+          </div>
+          <div id="factCardsList" class="achievements-list"></div>
+        </div>
+
+        <!-- Language Lessons Gallery -->
+        <button id="btnLessons" class="btn-gallery btn-lessons" type="button" title="View Language Mini-Lessons">🗣️</button>
+        <div id="uiLessons" class="lessons-gallery hidden">
+          <div class="gallery-header">
+            <h2>Language Lessons</h2>
+            <div id="lessonProgress" class="achievement-progress">0 / 10 Learned (0%)</div>
+            <button id="btnCloseLessons" class="btn-close" type="button">✕</button>
+          </div>
+          <div id="lessonsList" class="achievements-list"></div>
+        </div>
+
+        <!-- Historical Timelines Gallery -->
+        <button id="btnTimelines" class="btn-gallery btn-timelines" type="button" title="View Historical Timelines">🕰️</button>
+        <div id="uiTimelines" class="timelines-gallery hidden">
+          <div class="gallery-header">
+            <h2>Historical Timelines</h2>
+            <div id="timelineProgress" class="achievement-progress">0 / 10 Collected (0%)</div>
+            <button id="btnCloseTimelines" class="btn-close" type="button">✕</button>
+          </div>
+          <div id="timelinesList" class="achievements-list"></div>
+        </div>
+
+        <!-- Recipe Books Gallery -->
+        <button id="btnRecipes" class="btn-gallery btn-recipes" type="button" title="View Recipe Books">🍲</button>
+        <div id="uiRecipes" class="recipes-gallery hidden">
+          <div class="gallery-header">
+            <h2>Recipe Books</h2>
+            <div id="recipeProgress" class="achievement-progress">0 / 10 Collected (0%)</div>
+            <button id="btnCloseRecipes" class="btn-close" type="button">✕</button>
+          </div>
+          <div id="recipesList" class="achievements-list"></div>
+        </div>
+
+        <!-- Accessibility Settings -->
+        <button id="btnAccessibility" class="btn-gallery btn-settings" type="button" title="Accessibility Settings">⚙️</button>
+        <div id="uiAccessibility" class="accessibility-panel hidden">
+          <div class="gallery-header">
+            <h2>Accessibility</h2>
+            <button id="btnCloseAccessibility" class="btn-close" type="button">✕</button>
+          </div>
+          <div class="accessibility-options">
+            <label class="accessibility-option">
+              <input id="toggleSubtitles" type="checkbox" />
+              <span>Subtitles for voiceovers</span>
+            </label>
+            <label class="accessibility-option">
+              <input id="toggleColorblind" type="checkbox" />
+              <span>High-contrast colors</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Mobile Touch Controls -->
+        <div id="uiMobileControls" class="mobile-controls">
+          <div class="mobile-pad">
+            <button class="mobile-btn" data-move="forward" type="button">W</button>
+            <div class="mobile-row">
+              <button class="mobile-btn" data-move="left" type="button">A</button>
+              <button class="mobile-btn" data-move="back" type="button">S</button>
+              <button class="mobile-btn" data-move="right" type="button">D</button>
+            </div>
+          </div>
+          <div class="mobile-actions">
+            <button class="mobile-btn action" data-action="interact" type="button">E</button>
+            <button class="mobile-btn sprint" data-action="sprint" type="button">Shift</button>
+          </div>
+        </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

@@ -27,6 +27,22 @@ A Babylon.js 3D cultural exploration game featuring multiple African regions and
    - Temple Tablets: Collect sacred inscriptions
    - Celestial Alignment: Pyramid temple exploration
 
+4. **Asia Gallery**
+   - **India**
+     - Spice Collection: Gather market spices
+     - Tala Practice: Complete rhythm training
+     - Mantra Recitation: Collect and chant sacred fragments
+     - Marble Court Reflection: Complete the final ritual
+   - **China**
+     - Silk Collection: Gather and dye silk spools
+     - Woodblock Printing: Carve and print traditional blocks
+     - Scroll Art: Complete painted scroll traditions
+   - **Japan**
+     - Tea Ceremony: Gather leaves and perform chanoyu
+     - Bonsai Pruning: Complete garden shaping tasks
+     - Calligraphy Practice: Compose character art
+     - Temple Pilgrimage: Complete seal collection and final rite
+
 ### Game Flow
 1. **Hub Globe**: Rotate and select Africa continent
 2. **Africa Gallery**: Choose from Nigeria, Kenya, or Egypt
@@ -52,7 +68,24 @@ A Babylon.js 3D cultural exploration game featuring multiple African regions and
 - **Save/Load System**: Automatic progress saving with localStorage (auto-save every 30s)
 - **Achievement System**: 20 unlockable achievements across explorer, mission, collectible, and special categories
 - **Achievements Gallery**: Trophy button with detailed view of all achievements and progress tracking
-- **Modular Architecture**: Split into reusable modules (types, saveSystem, achievementSystem, audioSystem, uiManager, missionManager)
+- **Cultural Fact Cards**: Collectible lore cards with a dedicated gallery and progress tracking
+- **Language Mini-Lessons**: Region/tribe greeting lessons with pronunciation and progress tracking
+- **Historical Timelines**: Collectible timeline cards for each culture with progression persistence
+- **Recipe Books**: Culture-specific recipes with ingredients and practical step-by-step instructions
+- **Elder Story Voiceovers**: Tribe-based narrated stories with automatic playback on unlock
+- **Mobile Touch Controls**: On-screen movement and interaction buttons for touch devices
+- **Accessibility Settings**: Subtitles for voiceovers and a high-contrast color mode
+- **Photo Mode Enhancements**: Screenshot capture and multiple visual filters
+- **Guestbook**: Local community messages with persistent entries
+- **Shareable Achievement Badges**: Copy/share text and downloadable badge cards
+- **Asia Expansion**: Interactive Asia gallery with India, China, and Japan mission paths
+- **Performance Optimization**: Manual code-splitting for Babylon.js bundles
+- **Performance Optimization**: Deferred globe detail textures for faster initial load
+- **Asset Loading System**: Cached texture loading and preloading helpers
+- **Offline Caching**: Service worker caches core assets for faster repeat loads
+- **Offline Caching**: Globe texture assets are pre-cached for quicker startup
+- **Region Lazy-Loading**: Modular region loader infrastructure for deferred mesh creation
+- **Modular Architecture**: Split into reusable modules (types, saveSystem, achievementSystem, audioSystem, uiManager, missionManager, regionLoaders)
 
 ## Technical Architecture
 - **Engine**: Babylon.js (WebGL 3D rendering)
@@ -73,11 +106,35 @@ npm run build      # Production build
 ```
 
 ## Development Status
-**Phase 16-17 Completed (Current)**
+**Phase 18 Completed (Current)**
+- ✅ Region lazy-loading infrastructure with registry pattern
+- ✅ loadRegion() async pattern for deferred mesh creation
+- ✅ Automatic region loading on state transitions (nigeria, kenya, egypt, morocco, southafrica, ethiopia)
+- ✅ Foundation for splitting region mesh creation into separate loader modules
+- 🔄 Next: Refactor region mesh creation into lazy loader functions
+
+**Phase 16-17 Completed**
 - ✅ Modular code architecture (8 TypeScript modules)
 - ✅ Save/Load system with auto-save
 - ✅ Achievement system with 20 achievements
 - ✅ Achievements gallery UI
+- ✅ Cultural fact cards gallery with persistent collection progress
+- ✅ Language mini-lessons gallery with persistent lesson unlocks
+- ✅ Interactive historical timeline cards with persistent unlocks
+- ✅ Recipe books gallery with persistent unlocks and instruction previews
+- ✅ Elder storytelling voiceovers with persistent unlocks
+- ✅ Basic mobile touch controls for movement and interaction
+- ✅ Accessibility settings (subtitles + high-contrast mode)
+- ✅ Photo mode screenshot + filter tools (sepia, cool, vignette, film, mono)
+- ✅ Guestbook panel with local persistence
+- ✅ Shareable achievement badges with copy/download actions
+- ✅ Initial performance optimization with manual chunking
+- ✅ Deferred globe detail texture loading
+- ✅ Cached asset loader for textures
+- ✅ Service worker caching for core assets
+- ✅ Core globe textures pre-cached for offline use
+- ✅ Asia gallery + playable India, China, and Japan mission chains
+- ✅ China/Japan tribal mission progression and achievement integration
 - ✅ Progress statistics tracking
 
 **Previous Phases**

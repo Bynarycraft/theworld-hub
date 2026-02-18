@@ -15,6 +15,11 @@ export class SaveSystem {
     selectedLGA: IgboLGA | null
     missions: any
     achievements: string[]
+    factCards?: string[]
+    languageLessons?: string[]
+    historicalTimelines?: string[]
+    recipeBooks?: string[]
+    elderStories?: string[]
     collectiblesFound: number
     missionsCompleted: number
   }): void {
@@ -28,6 +33,11 @@ export class SaveSystem {
       selectedLGA: data.selectedLGA,
       missions: data.missions,
       achievements: data.achievements,
+      factCards: data.factCards ?? [],
+      languageLessons: data.languageLessons ?? [],
+      historicalTimelines: data.historicalTimelines ?? [],
+      recipeBooks: data.recipeBooks ?? [],
+      elderStories: data.elderStories ?? [],
       stats: {
         totalPlayTime: this.getExistingPlayTime() + playTime,
         regionsVisited: Array.from(this.regionsVisited),

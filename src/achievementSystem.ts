@@ -49,6 +49,55 @@ export class AchievementSystem {
         icon: '🇪🇬',
         unlocked: false,
       },
+      {
+        id: 'morocco-complete',
+        title: 'Berber Heritage Keeper',
+        description: 'Complete all Berber missions in Morocco',
+        icon: '🇲🇦',
+        unlocked: false,
+      },
+      {
+        id: 'southafrica-complete',
+        title: 'Southern Traditions',
+        description: 'Complete all Zulu and Xhosa missions',
+        icon: '🇿🇦',
+        unlocked: false,
+      },
+      {
+        id: 'ethiopia-complete',
+        title: 'Highland Wisdom',
+        description: 'Complete all Amhara and Oromo missions',
+        icon: '🇪🇹',
+        unlocked: false,
+      },
+      {
+        id: 'asia-complete',
+        title: 'Asia Cultural Constellation',
+        description: 'Complete India, China, and Japan regional journeys',
+        icon: '🗺️',
+        unlocked: false,
+      },
+      {
+        id: 'india-complete',
+        title: 'India Harmony Path',
+        description: 'Complete all Indian cultural missions',
+        icon: '🇮🇳',
+        unlocked: false,
+      },
+      {
+        id: 'china-complete',
+        title: 'Middle Kingdom Artisan',
+        description: 'Complete all Chinese cultural missions',
+        icon: '🇨🇳',
+        unlocked: false,
+      },
+      {
+        id: 'japan-complete',
+        title: 'Way of Harmony',
+        description: 'Complete all Japanese cultural missions',
+        icon: '🇯🇵',
+        unlocked: false,
+      },
 
       // Mission Achievements
       {
@@ -105,6 +154,62 @@ export class AchievementSystem {
         title: 'Celestial Alignment',
         description: 'Complete the pyramid temple ceremony',
         icon: '⭐',
+        unlocked: false,
+      },
+      {
+        id: 'berber-complete',
+        title: 'Kasbah Artisan',
+        description: 'Complete all Berber cultural activities',
+        icon: '🧶',
+        unlocked: false,
+      },
+      {
+        id: 'zulu-complete',
+        title: 'Zulu Warrior Path',
+        description: 'Complete the Zulu warrior journey',
+        icon: '🛡️',
+        unlocked: false,
+      },
+      {
+        id: 'xhosa-complete',
+        title: 'Xhosa Ancestor\'s Honor',
+        description: 'Complete the Xhosa ancestral path',
+        icon: '🪘',
+        unlocked: false,
+      },
+      {
+        id: 'amhara-complete',
+        title: 'Amhara Legacy',
+        description: 'Complete the Amhara ceremonial path',
+        icon: '☕',
+        unlocked: false,
+      },
+      {
+        id: 'oromo-complete',
+        title: 'Oromo Council Keeper',
+        description: 'Complete the Oromo ritual path',
+        icon: '🌿',
+        unlocked: false,
+      },
+      {
+        id: 'indian-complete',
+        title: 'Spice Route Sage',
+        description: 'Complete the Indian ceremonial mission chain',
+        icon: '🪔',
+        unlocked: false,
+      },
+      {
+        id: 'chinese-complete',
+        title: 'Silk and Scroll Master',
+        description: 'Complete the Chinese artisan mission chain',
+        icon: '🏮',
+        unlocked: false,
+      },
+      {
+        id: 'japanese-complete',
+        title: 'Tea and Temple Keeper',
+        description: 'Complete the Japanese harmony mission chain',
+        icon: '⛩️',
         unlocked: false,
       },
 
@@ -241,10 +346,22 @@ export class AchievementSystem {
       'nigeria': 'nigeria-complete',
       'kenya': 'kenya-complete',
       'egypt': 'egypt-complete',
+      'morocco': 'morocco-complete',
+      'southafrica': 'southafrica-complete',
+      'ethiopia': 'ethiopia-complete',
+      'india': 'india-complete',
+      'china': 'china-complete',
+      'japan': 'japan-complete',
     }
     const achievementId = regionMap[region.toLowerCase()]
     if (achievementId) {
       this.unlock(achievementId)
+
+      const asiaRegionAchievements = ['india-complete', 'china-complete', 'japan-complete']
+      const hasAllAsiaRegions = asiaRegionAchievements.every((id) => this.unlocked.has(id))
+      if (hasAllAsiaRegions) {
+        this.unlock('asia-complete')
+      }
     }
   }
 

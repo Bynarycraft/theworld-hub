@@ -35,6 +35,26 @@ export class UIManager {
       'achievementProgress',
       'achievementsList',
       'btnCloseAchievements',
+      'btnFactCards',
+      'uiFactCards',
+      'factCardProgress',
+      'factCardsList',
+      'btnCloseFactCards',
+      'btnLessons',
+      'uiLessons',
+      'lessonProgress',
+      'lessonsList',
+      'btnCloseLessons',
+      'btnTimelines',
+      'uiTimelines',
+      'timelineProgress',
+      'timelinesList',
+      'btnCloseTimelines',
+      'btnRecipes',
+      'uiRecipes',
+      'recipeProgress',
+      'recipesList',
+      'btnCloseRecipes',
     ]
 
     elementIds.forEach(id => {
@@ -189,6 +209,46 @@ export class UIManager {
     }
   }
 
+  setupFactCardsGallery(onOpen: () => void): void {
+    this.get('btnFactCards').onclick = () => {
+      this.toggleFactCardsGallery()
+      onOpen()
+    }
+    this.get('btnCloseFactCards').onclick = () => {
+      this.hideFactCardsGallery()
+    }
+  }
+
+  setupLessonsGallery(onOpen: () => void): void {
+    this.get('btnLessons').onclick = () => {
+      this.toggleLessonsGallery()
+      onOpen()
+    }
+    this.get('btnCloseLessons').onclick = () => {
+      this.hideLessonsGallery()
+    }
+  }
+
+  setupTimelinesGallery(onOpen: () => void): void {
+    this.get('btnTimelines').onclick = () => {
+      this.toggleTimelinesGallery()
+      onOpen()
+    }
+    this.get('btnCloseTimelines').onclick = () => {
+      this.hideTimelinesGallery()
+    }
+  }
+
+  setupRecipesGallery(onOpen: () => void): void {
+    this.get('btnRecipes').onclick = () => {
+      this.toggleRecipesGallery()
+      onOpen()
+    }
+    this.get('btnCloseRecipes').onclick = () => {
+      this.hideRecipesGallery()
+    }
+  }
+
   toggleAchievementsGallery(): void {
     const gallery = this.get('uiAchievements')
     gallery.classList.toggle('hidden')
@@ -200,6 +260,58 @@ export class UIManager {
 
   hideAchievementsGallery(): void {
     this.get('uiAchievements').classList.add('hidden')
+  }
+
+  toggleFactCardsGallery(): void {
+    const gallery = this.get('uiFactCards')
+    gallery.classList.toggle('hidden')
+  }
+
+  showFactCardsGallery(): void {
+    this.get('uiFactCards').classList.remove('hidden')
+  }
+
+  hideFactCardsGallery(): void {
+    this.get('uiFactCards').classList.add('hidden')
+  }
+
+  toggleLessonsGallery(): void {
+    const gallery = this.get('uiLessons')
+    gallery.classList.toggle('hidden')
+  }
+
+  showLessonsGallery(): void {
+    this.get('uiLessons').classList.remove('hidden')
+  }
+
+  hideLessonsGallery(): void {
+    this.get('uiLessons').classList.add('hidden')
+  }
+
+  toggleTimelinesGallery(): void {
+    const gallery = this.get('uiTimelines')
+    gallery.classList.toggle('hidden')
+  }
+
+  showTimelinesGallery(): void {
+    this.get('uiTimelines').classList.remove('hidden')
+  }
+
+  hideTimelinesGallery(): void {
+    this.get('uiTimelines').classList.add('hidden')
+  }
+
+  toggleRecipesGallery(): void {
+    const gallery = this.get('uiRecipes')
+    gallery.classList.toggle('hidden')
+  }
+
+  showRecipesGallery(): void {
+    this.get('uiRecipes').classList.remove('hidden')
+  }
+
+  hideRecipesGallery(): void {
+    this.get('uiRecipes').classList.add('hidden')
   }
 
   updateAchievementsGallery(achievements: any[], progress: { unlocked: number; total: number; percentage: number }): void {
@@ -222,6 +334,118 @@ export class UIManager {
         ${ach.unlocked ? '<div class="achievement-badge">Unlocked</div>' : ''}
       `
       
+      listEl.appendChild(item)
+    })
+  }
+
+  updateFactCardsGallery(cards: Array<{ title: string; region: string; body: string; unlocked: boolean }>, progress: { unlocked: number; total: number; percentage: number }): void {
+    const progressEl = this.get('factCardProgress')
+    progressEl.textContent = `${progress.unlocked} / ${progress.total} Collected (${progress.percentage}%)`
+
+    const listEl = this.get('factCardsList')
+    listEl.innerHTML = ''
+
+    cards.forEach(card => {
+      const item = document.createElement('div')
+      item.className = `achievement-item ${card.unlocked ? 'unlocked' : 'locked'}`
+
+      item.innerHTML = `
+        <div class="achievement-item-icon">${card.unlocked ? '📖' : '🔒'}</div>
+        <div class="achievement-item-content">
+          <div class="achievement-item-title">${card.unlocked ? card.title : 'Unknown Cultural Insight'}</div>
+          <div class="achievement-item-description">${card.unlocked ? `${card.region}: ${card.body}` : 'Locked - Visit more regions and tribes to discover this fact card.'}</div>
+        </div>
+        ${card.unlocked ? '<div class="achievement-badge">Collected</div>' : ''}
+      `
+
+      listEl.appendChild(item)
+    })
+  }
+
+  updateLessonsGallery(
+    lessons: Array<{ title: string; region: string; phrase: string; pronunciation: string; meaning: string; unlocked: boolean }>,
+    progress: { unlocked: number; total: number; percentage: number }
+  ): void {
+    const progressEl = this.get('lessonProgress')
+    progressEl.textContent = `${progress.unlocked} / ${progress.total} Learned (${progress.percentage}%)`
+
+    const listEl = this.get('lessonsList')
+    listEl.innerHTML = ''
+
+    lessons.forEach(lesson => {
+      const item = document.createElement('div')
+      item.className = `achievement-item ${lesson.unlocked ? 'unlocked' : 'locked'}`
+
+      item.innerHTML = `
+        <div class="achievement-item-icon">${lesson.unlocked ? '🗣️' : '🔒'}</div>
+        <div class="achievement-item-content">
+          <div class="achievement-item-title">${lesson.unlocked ? lesson.title : 'Unknown Lesson'}</div>
+          <div class="achievement-item-description">${lesson.unlocked ? `${lesson.region}: ${lesson.phrase} (${lesson.pronunciation}) — ${lesson.meaning}` : 'Locked - Visit this culture to unlock the lesson.'}</div>
+        </div>
+        ${lesson.unlocked ? '<div class="achievement-badge">Learned</div>' : ''}
+      `
+
+      listEl.appendChild(item)
+    })
+  }
+
+  updateTimelinesGallery(
+    timelines: Array<{ title: string; region: string; entries: Array<{ yearLabel: string; event: string }>; unlocked: boolean }>,
+    progress: { unlocked: number; total: number; percentage: number }
+  ): void {
+    const progressEl = this.get('timelineProgress')
+    progressEl.textContent = `${progress.unlocked} / ${progress.total} Collected (${progress.percentage}%)`
+
+    const listEl = this.get('timelinesList')
+    listEl.innerHTML = ''
+
+    timelines.forEach(timeline => {
+      const item = document.createElement('div')
+      item.className = `achievement-item ${timeline.unlocked ? 'unlocked' : 'locked'}`
+
+      const timelineText = timeline.entries
+        .map(entry => `${entry.yearLabel}: ${entry.event}`)
+        .join(' · ')
+
+      item.innerHTML = `
+        <div class="achievement-item-icon">${timeline.unlocked ? '🕰️' : '🔒'}</div>
+        <div class="achievement-item-content">
+          <div class="achievement-item-title">${timeline.unlocked ? timeline.title : 'Unknown Timeline'}</div>
+          <div class="achievement-item-description">${timeline.unlocked ? `${timeline.region}: ${timelineText}` : 'Locked - Visit this culture to unlock its timeline.'}</div>
+        </div>
+        ${timeline.unlocked ? '<div class="achievement-badge">Collected</div>' : ''}
+      `
+
+      listEl.appendChild(item)
+    })
+  }
+
+  updateRecipesGallery(
+    recipes: Array<{ title: string; region: string; dishName: string; ingredients: string[]; steps: string[]; unlocked: boolean }>,
+    progress: { unlocked: number; total: number; percentage: number }
+  ): void {
+    const progressEl = this.get('recipeProgress')
+    progressEl.textContent = `${progress.unlocked} / ${progress.total} Collected (${progress.percentage}%)`
+
+    const listEl = this.get('recipesList')
+    listEl.innerHTML = ''
+
+    recipes.forEach(recipe => {
+      const item = document.createElement('div')
+      item.className = `achievement-item ${recipe.unlocked ? 'unlocked' : 'locked'}`
+
+      const previewIngredients = recipe.ingredients.slice(0, 4).join(', ')
+      const previewSteps = recipe.steps.slice(0, 2).join(' → ')
+
+      item.innerHTML = `
+        <div class="achievement-item-icon">${recipe.unlocked ? '🍲' : '🔒'}</div>
+        <div class="achievement-item-content">
+          <div class="achievement-item-title">${recipe.unlocked ? `${recipe.title} · ${recipe.dishName}` : 'Unknown Recipe Book'}</div>
+          <div class="achievement-item-description">${recipe.unlocked ? `${recipe.region}: Ingredients (${previewIngredients}). Steps: ${previewSteps}.` : 'Locked - Visit this culture to unlock its recipe book.'}</div>
+        </div>
+        ${recipe.unlocked ? '<div class="achievement-badge">Collected</div>' : ''}
+      `
+
       listEl.appendChild(item)
     })
   }
