@@ -1,6 +1,6 @@
-# The World Museum Hub
+# Heritage (AEVON)
 
-A Babylon.js 3D cultural exploration game featuring multiple African regions and tribal missions. Players journey through interactive villages, complete cultural challenges, and learn about diverse traditions.
+Heritage is an AEVON Babylon.js 3D cultural exploration game featuring multiple regions and tribal missions. Players journey through interactive villages, complete cultural challenges, and learn about diverse traditions.
 
 ## Current Game Structure
 

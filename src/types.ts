@@ -1,4 +1,4 @@
-// Type definitions for The World Museum Hub
+// Type definitions for Heritage (AEVON)
 
 export type GameState = 'hub' | 'africa' | 'nigeria' | 'kenya' | 'egypt' | 'morocco' | 'southafrica' | 'ethiopia' | 'asia' | 'india' | 'china' | 'japan' | 'lga-select' | 'village' | 'festival'
 export type Tribe = 'Igbo' | 'Yoruba' | 'Hausa' | 'Maasai' | 'Egyptian' | 'Berber' | 'Zulu' | 'Xhosa' | 'Amhara' | 'Oromo' | 'Indian' | 'Chinese' | 'Japanese'

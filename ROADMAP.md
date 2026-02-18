@@ -1,4 +1,4 @@
-# The World Museum Hub - Expansion Roadmap
+# Heritage (AEVON) - Expansion Roadmap
 
 ## Vision
 Build a comprehensive 3D cultural exploration game that showcases traditions, ceremonies, and artifacts from diverse civilizations across all continents.

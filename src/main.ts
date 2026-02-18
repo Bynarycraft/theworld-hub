@@ -145,7 +145,7 @@ function renderBadges() {
     const item = document.createElement('div')
     item.className = 'badge-item'
 
-    const shareText = `I unlocked "${achievement.title}" in The World Museum Hub! 🏛️`
+    const shareText = `I unlocked "${achievement.title}" in Heritage by AEVON! 🏛️`
 
     const copyButton = document.createElement('button')
     copyButton.className = 'photo-btn'
@@ -181,7 +181,7 @@ function renderBadges() {
         ctx.font = 'bold 32px Palatino'
         ctx.fillText(achievement.title, badgeCanvas.width / 2, 140)
         ctx.font = '18px Palatino'
-        ctx.fillText('The World Museum Hub', badgeCanvas.width / 2, 190)
+        ctx.fillText('Heritage · AEVON', badgeCanvas.width / 2, 190)
         ctx.font = '24px Palatino'
         ctx.fillText(achievement.icon, badgeCanvas.width / 2, 240)
 
@@ -3625,7 +3625,7 @@ function setState(next: GameState) {
     desiredBeta = arcCamera.beta
     uiManager.get('uiCrosshair').classList.add('hidden')
     uiManager.get('uiChoices').classList.add('hidden')
-    setTitle('The World Museum', 'Choose a continent to begin your journey.')
+    setTitle('Heritage', 'An AEVON cultural journey. Choose a continent to begin.')
     setObjective('Explore the hub world.')
     setHint('Tip: Drag to rotate the globe, then click Africa.')
     setAction(null, null)
